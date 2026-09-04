@@ -9,15 +9,25 @@ An interactive, real-time Computer Vision game that lets you play **Rock-Paper-S
 
 ---
 
-## 📸 Demo & Gameplay Preview
+## 📸 Gameplay & Interface Previews
 
-> 🎬 **[Watch Full Video Demo (demo/demo-rps.mp4)](demo/demo-rps.mp4)**
+### 1. Player Profiles & Session Management
+| Profile Login Screen | Returning Player Decision Modal |
+| :---: | :---: |
+| ![Profile Login Screen](demo/Screenshot%202026-09-04%20213000.png) | ![Session Decision Modal](demo/Screenshot%202026-09-04%20213010.png) |
+| *Personalized profile login for unique AI tracking* | *Choose between starting fresh or resuming scores* |
 
-https://github.com/user-attachments/assets/demo-rps.mp4 <!-- When uploaded to GitHub, this plays inline -->
+### 2. Live Arena & Hand Landmark Tracking
+| Arena Idle & Ready Screen | Live Round Countdown & Tracking |
+| :---: | :---: |
+| ![Arena Ready Screen](demo/Screenshot%202026-09-04%20213200.png) | ![Live Round Countdown](demo/Screenshot%202026-09-04%20213056.png) |
+| *Arena ready prompt with live gesture tracking* | *3... 2... 1... circular countdown gauge triggered via [SPACE]* |
 
-| Profile Login & Arena | Live Hand Tracking | Showdown & Victory |
+### 3. Match Outcomes & Round Results
+| Player Victory | AI Victory | Draw Match |
 | :---: | :---: | :---: |
-| ![Login Preview](demo/Screenshot%202026-09-04%20204456.png) | ![Gameplay Preview](demo/Screenshot%202026-09-04%20204518.png) | ![Victory Preview](demo/Screenshot%202026-09-04%20204530.png) |
+| ![Player Victory](demo/Screenshot%202026-09-04%20213133.png) | ![AI Victory](demo/Screenshot%202026-09-04%20213147.png) | ![Draw Match](demo/Screenshot%202026-09-04%20213110.png) |
+| *Rock counters Scissors (+1 to Player)* | *Scissors counters Paper (+1 to AI)* | *Matching moves (Draw / Streak maintained)* |
 
 ---
 

@@ -35,35 +35,46 @@ is_fullscreen = True
 
 # Game constants
 CHOICES = ["ROCK", "PAPER", "SCISSORS"]
+CHOICE_ICONS = {
+    "ROCK": "ROCK [✊]",
+    "PAPER": "PAPER [✋]",
+    "SCISSORS": "SCISSORS [✌️]"
+}
 BEATS = {"ROCK": "SCISSORS", "PAPER": "ROCK", "SCISSORS": "PAPER"}
 
 # Game States
-STATE_NAME_INPUT = "NAME_INPUT"  # Entering player name at start / switch
-STATE_IDLE = "IDLE"              # Waiting for player to press SPACE
-STATE_COUNTDOWN = "COUNTDOWN"    # 3, 2, 1 countdown
-STATE_SHOW_RESULT = "RESULT"      # Showing winner of current round
+STATE_NAME_INPUT = "NAME_INPUT"          # Entering player name
+STATE_SESSION_CHOICE = "SESSION_CHOICE"  # Choose Start New vs Resume
+STATE_IDLE = "IDLE"                      # Waiting for player to press SPACE
+STATE_COUNTDOWN = "COUNTDOWN"            # 3, 2, 1 countdown
+STATE_SHOW_RESULT = "RESULT"              # Showing winner of current round
 
 game_state = STATE_NAME_INPUT
 countdown_duration = 3.0
 state_start_time = 0.0
-result_display_duration = 3.5
 
 # Active Player Profile
 player_name = "Player 1"
+temp_player_name = "Player 1"
 input_text = ""
 score_player = 0
 score_ai = 0
 score_ties = 0
 streak = 0
 best_streak = 0
-match_history = deque(maxlen=6)  # Stores ('W', 'L', 'D')
+match_history = deque(maxlen=6)
+
+prev_score_player = 0
+prev_score_ai = 0
+prev_score_ties = 0
+prev_best_streak = 0
 
 player_move = None
 ai_move = None
 round_result = None
 
 # AI Engine
-ai_mode = "Predictive"  # "Predictive" or "Random"
+ai_mode = "Predictive"
 transitions = defaultdict(lambda: {"ROCK": 1, "PAPER": 1, "SCISSORS": 1})
 last_player_move = None
 
@@ -71,7 +82,7 @@ last_player_move = None
 FINGER_TIPS = [8, 12, 16, 20]
 FINGER_PIPS = [6, 10, 14, 18]
 
-# Load Crisp Fonts using PIL
+# Load Crisp TrueType Fonts
 def get_font(size, bold=False):
     font_names = [
         "C:\\Windows\\Fonts\\segoeuib.ttf" if bold else "C:\\Windows\\Fonts\\segoeui.ttf",
@@ -85,17 +96,18 @@ def get_font(size, bold=False):
             continue
     return ImageFont.load_default()
 
-FONT_TITLE = get_font(26, bold=True)
-FONT_SCORE = get_font(32, bold=True)
-FONT_LABEL = get_font(18, bold=False)
-FONT_LABEL_BOLD = get_font(20, bold=True)
-FONT_BIG_COUNT = get_font(110, bold=True)
-FONT_BANNER = get_font(52, bold=True)
-FONT_SUB_BANNER = get_font(24, bold=False)
-FONT_CARD_TITLE = get_font(22, bold=True)
-FONT_CARD_MOVE = get_font(36, bold=True)
+FONT_TITLE = get_font(24, bold=True)
+FONT_SCORE = get_font(30, bold=True)
+FONT_LABEL = get_font(16, bold=False)
+FONT_LABEL_BOLD = get_font(18, bold=True)
+FONT_BIG_COUNT = get_font(90, bold=True)
+FONT_BANNER = get_font(44, bold=True)
+FONT_SUB_BANNER = get_font(20, bold=False)
+FONT_CARD_TITLE = get_font(20, bold=True)
+FONT_CARD_MOVE = get_font(32, bold=True)
 FONT_HISTORY = get_font(13, bold=True)
-FONT_INPUT = get_font(38, bold=True)
+FONT_INPUT = get_font(34, bold=True)
+FONT_MODAL_TITLE = get_font(28, bold=True)
 
 # ==========================================================
 # 2. PERSISTENT PLAYER DATA & AI MEMORY STORAGE
@@ -115,7 +127,6 @@ def save_current_player():
         return
     data = load_all_players()
     
-    # Format transitions into plain dict for JSON serialization
     serialized_transitions = {}
     for k, v in transitions.items():
         serialized_transitions[k] = dict(v)
@@ -131,7 +142,7 @@ def save_current_player():
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
-def switch_to_player(name):
+def switch_to_player(name, resume_scores=False):
     global player_name, score_player, score_ai, score_ties, streak, best_streak, transitions, match_history, last_player_move
     player_name = name.strip() if name.strip() else "Player 1"
     data = load_all_players()
@@ -143,10 +154,16 @@ def switch_to_player(name):
 
     if player_name in data:
         p_data = data[player_name]
-        score_player = p_data.get("score_player", 0)
-        score_ai = p_data.get("score_ai", 0)
-        score_ties = p_data.get("score_ties", 0)
         best_streak = p_data.get("best_streak", 0)
+        
+        if resume_scores:
+            score_player = p_data.get("score_player", 0)
+            score_ai = p_data.get("score_ai", 0)
+            score_ties = p_data.get("score_ties", 0)
+        else:
+            score_player = 0
+            score_ai = 0
+            score_ties = 0
         
         saved_trans = p_data.get("transitions", {})
         for move, counts in saved_trans.items():
@@ -226,44 +243,79 @@ def draw_cyber_hand(frame, hand_landmarks):
 def render_ui(frame, current_time, live_gesture):
     h, w, _ = frame.shape
 
-    pil_frame = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)).convert("RGBA")
+    # Solid Dark Arena Background across the entire screen
+    pil_frame = Image.new("RGBA", (w, h), (12, 16, 26, 255))
     overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
 
+    # Ambient Studio Grid Lines
+    for gx in range(0, w, 80):
+        draw.line([(gx, 0), (gx, h)], fill=(20, 28, 44, 120), width=1)
+    for gy in range(0, h, 80):
+        draw.line([(0, gy), (w, gy)], fill=(20, 28, 44, 120), width=1)
+
     # -------------------------------------------------------------
-    # STATE: NAME INPUT PROFILE SCREEN
+    # STATE 1: NAME INPUT PROFILE SCREEN
     # -------------------------------------------------------------
     if game_state == STATE_NAME_INPUT:
-        # Full dark glass modal in center
+        draw.text((w // 2, 70), "ROCK PAPER SCISSORS AI", font=FONT_BANNER, fill=(35, 55, 90, 180), anchor="mm")
+
         modal_w, modal_h = 580, 280
         mx1 = (w - modal_w) // 2
         my1 = (h - modal_h) // 2
         mx2 = mx1 + modal_w
         my2 = my1 + modal_h
 
-        # Dim background
-        draw.rectangle([0, 0, w, h], fill=(5, 8, 15, 200))
+        draw.rounded_rectangle([mx1 - 4, my1 - 4, mx2 + 4, my2 + 4], radius=24, fill=(0, 240, 255, 60))
+        draw.rounded_rectangle([mx1, my1, mx2, my2], radius=20, fill=(15, 18, 28, 250), outline=(0, 240, 255, 255), width=2)
 
-        # Modal Box
-        draw.rounded_rectangle([mx1 - 4, my1 - 4, mx2 + 4, my2 + 4], radius=24, fill=(0, 240, 255, 50))
-        draw.rounded_rectangle([mx1, my1, mx2, my2], radius=20, fill=(15, 18, 28, 245), outline=(0, 240, 255, 255), width=2)
-
-        # Modal Content
         draw.text((mx1 + modal_w // 2, my1 + 35), "PLAYER PROFILE LOGIN", font=FONT_TITLE, fill=(255, 255, 255, 255), anchor="mm")
-        draw.text((mx1 + modal_w // 2, my1 + 72), "AI remembers unique patterns & scores for each player", font=FONT_LABEL, fill=(160, 180, 210, 255), anchor="mm")
+        draw.text((mx1 + modal_w // 2, my1 + 72), "AI remembers unique habits & scores for each player", font=FONT_LABEL, fill=(160, 180, 210, 255), anchor="mm")
 
-        # Input Box
         ib_x1, ib_y1, ib_x2, ib_y2 = mx1 + 40, my1 + 105, mx2 - 40, my1 + 175
         draw.rounded_rectangle([ib_x1, ib_y1, ib_x2, ib_y2], radius=12, fill=(25, 32, 48, 240), outline=(70, 90, 130, 255), width=2)
         
-        # Display typed name + blinking cursor
         cursor = "_" if int(current_time * 2) % 2 == 0 else ""
         display_name = (input_text if input_text else "Enter Name...") + cursor
         text_color = (0, 255, 220, 255) if input_text else (120, 140, 170, 255)
-        draw.text((ib_x1 + 20, ib_y1 + 14), display_name, font=FONT_INPUT, fill=text_color)
+        draw.text((ib_x1 + 20, ib_y1 + 16), display_name, font=FONT_INPUT, fill=text_color)
 
-        # Helper
         draw.text((mx1 + modal_w // 2, my1 + 225), "Press [ENTER] to Confirm   |   [ESC] Use Guest", font=FONT_LABEL_BOLD, fill=(255, 200, 0, 255), anchor="mm")
+
+        final_img = Image.alpha_composite(pil_frame, overlay)
+        return cv2.cvtColor(np.array(final_img.convert("RGB")), cv2.COLOR_RGB2BGR)
+
+    # -------------------------------------------------------------
+    # STATE 2: RETURNING PLAYER SESSION CHOICE SCREEN
+    # -------------------------------------------------------------
+    elif game_state == STATE_SESSION_CHOICE:
+        draw.text((w // 2, 70), "ROCK PAPER SCISSORS AI", font=FONT_BANNER, fill=(35, 55, 90, 180), anchor="mm")
+
+        modal_w, modal_h = 680, 340
+        mx1 = (w - modal_w) // 2
+        my1 = (h - modal_h) // 2
+        mx2 = mx1 + modal_w
+        my2 = my1 + modal_h
+
+        draw.rounded_rectangle([mx1 - 4, my1 - 4, mx2 + 4, my2 + 4], radius=24, fill=(0, 240, 255, 70))
+        draw.rounded_rectangle([mx1, my1, mx2, my2], radius=20, fill=(15, 18, 28, 250), outline=(0, 240, 255, 255), width=2)
+
+        draw.text((mx1 + modal_w // 2, my1 + 35), f"WELCOME BACK, {temp_player_name.upper()}!", font=FONT_MODAL_TITLE, fill=(0, 240, 255, 255), anchor="mm")
+        
+        stats_text = f"Previous Session: YOU {prev_score_player}  |  AI {prev_score_ai}  |  TIES {prev_score_ties}   (Best Streak: {prev_best_streak})"
+        draw.text((mx1 + modal_w // 2, my1 + 75), stats_text, font=FONT_LABEL, fill=(200, 215, 240, 255), anchor="mm")
+
+        b1_x1, b1_y1, b1_x2, b1_y2 = mx1 + 40, my1 + 115, mx2 - 40, my1 + 185
+        draw.rounded_rectangle([b1_x1, b1_y1, b1_x2, b1_y2], radius=14, fill=(15, 45, 60, 240), outline=(0, 230, 255, 255), width=2)
+        draw.text((b1_x1 + 25, b1_y1 + 14), "[ENTER] or [N]  START NEW GAME", font=FONT_LABEL_BOLD, fill=(0, 255, 220, 255))
+        draw.text((b1_x1 + 25, b1_y1 + 42), "Reset scores to 0-0  (Keeps AI learned habits & best streak record)", font=FONT_LABEL, fill=(180, 210, 230, 255))
+
+        b2_x1, b2_y1, b2_x2, b2_y2 = mx1 + 40, my1 + 205, mx2 - 40, my1 + 275
+        draw.rounded_rectangle([b2_x1, b2_y1, b2_x2, b2_y2], radius=14, fill=(45, 20, 45, 240), outline=(240, 80, 220, 255), width=2)
+        draw.text((b2_x1 + 25, b2_y1 + 14), "[C]  CONTINUE / RESUME SCORES", font=FONT_LABEL_BOLD, fill=(255, 120, 240, 255))
+        draw.text((b2_x1 + 25, b2_y1 + 42), f"Resume previous scores (YOU: {prev_score_player} | AI: {prev_score_ai} | TIES: {prev_score_ties})", font=FONT_LABEL, fill=(220, 190, 220, 255))
+
+        draw.text((mx1 + modal_w // 2, my1 + 305), "Press [ESC] to change name", font=FONT_LABEL, fill=(140, 150, 175, 255), anchor="mm")
 
         final_img = Image.alpha_composite(pil_frame, overlay)
         return cv2.cvtColor(np.array(final_img.convert("RGB")), cv2.COLOR_RGB2BGR)
@@ -271,21 +323,20 @@ def render_ui(frame, current_time, live_gesture):
     # -------------------------------------------------------------
     # A. TOP SCOREBOARD DOCK (Glassmorphic Dark Panel with Neon Border)
     # -------------------------------------------------------------
-    bar_x1, bar_y1, bar_x2, bar_y2 = 30, 18, w - 30, 126
-    draw.rounded_rectangle([bar_x1, bar_y1, bar_x2, bar_y2], radius=20, fill=(15, 17, 24, 225), outline=(60, 70, 95, 255), width=2)
+    bar_x1, bar_y1, bar_x2, bar_y2 = 30, 18, w - 30, 120
+    draw.rounded_rectangle([bar_x1, bar_y1, bar_x2, bar_y2], radius=20, fill=(15, 17, 24, 235), outline=(60, 70, 95, 255), width=2)
     draw.line([(bar_x1 + 30, bar_y1 + 2), (w // 2, bar_y1 + 2)], fill=(0, 240, 255, 255), width=3)
     draw.line([(w // 2, bar_y1 + 2), (bar_x2 - 30, bar_y1 + 2)], fill=(240, 60, 255, 255), width=3)
 
     # Left: Player Name & AI Mode Tag
     draw.text((bar_x1 + 25, bar_y1 + 16), f"PLAYER: {player_name.upper()}", font=FONT_TITLE, fill=(255, 255, 255, 255))
     
-    # Dynamic AI Mode Pill
     mode_color = (0, 230, 180, 255) if ai_mode == "Predictive" else (220, 220, 220, 255)
     ai_tag = f"AI: {ai_mode.upper()} [D to toggle]"
     t_left, t_top, t_right, t_bottom = draw.textbbox((0, 0), ai_tag, font=FONT_LABEL)
     tag_w = (t_right - t_left) + 40
     pill_x1 = bar_x1 + 25
-    pill_y1 = bar_y1 + 58
+    pill_y1 = bar_y1 + 54
     pill_x2 = pill_x1 + tag_w
     pill_y2 = pill_y1 + 32
     
@@ -295,15 +346,15 @@ def render_ui(frame, current_time, live_gesture):
 
     # Center: Battle Score Badges (Player vs AI)
     center_x = w // 2
-    draw.rounded_rectangle([center_x - 170, bar_y1 + 22, center_x - 45, bar_y1 + 90], radius=12, fill=(10, 45, 65, 230), outline=(0, 220, 255, 255), width=2)
-    draw.text((center_x - 158, bar_y1 + 26), "YOU", font=FONT_LABEL_BOLD, fill=(0, 220, 255, 255))
-    draw.text((center_x - 85, bar_y1 + 32), str(score_player), font=FONT_SCORE, fill=(255, 255, 255, 255))
+    draw.rounded_rectangle([center_x - 170, bar_y1 + 20, center_x - 45, bar_y1 + 86], radius=12, fill=(10, 45, 65, 230), outline=(0, 220, 255, 255), width=2)
+    draw.text((center_x - 158, bar_y1 + 24), "YOU", font=FONT_LABEL_BOLD, fill=(0, 220, 255, 255))
+    draw.text((center_x - 85, bar_y1 + 28), str(score_player), font=FONT_SCORE, fill=(255, 255, 255, 255))
 
-    draw.text((center_x - 20, bar_y1 + 40), "VS", font=FONT_LABEL_BOLD, fill=(140, 150, 180, 255))
+    draw.text((center_x - 20, bar_y1 + 38), "VS", font=FONT_LABEL_BOLD, fill=(140, 150, 180, 255))
 
-    draw.rounded_rectangle([center_x + 45, bar_y1 + 22, center_x + 170, bar_y1 + 90], radius=12, fill=(65, 15, 35, 230), outline=(255, 60, 110, 255), width=2)
-    draw.text((center_x + 58, bar_y1 + 26), "AI", font=FONT_LABEL_BOLD, fill=(255, 80, 130, 255))
-    draw.text((center_x + 130, bar_y1 + 32), str(score_ai), font=FONT_SCORE, fill=(255, 255, 255, 255))
+    draw.rounded_rectangle([center_x + 45, bar_y1 + 20, center_x + 170, bar_y1 + 86], radius=12, fill=(65, 15, 35, 230), outline=(255, 60, 110, 255), width=2)
+    draw.text((center_x + 58, bar_y1 + 24), "AI", font=FONT_LABEL_BOLD, fill=(255, 80, 130, 255))
+    draw.text((center_x + 130, bar_y1 + 28), str(score_ai), font=FONT_SCORE, fill=(255, 255, 255, 255))
 
     # Right: Streak & Match History Pills
     streak_str = f"STREAK: {streak}  (Best: {best_streak})"
@@ -311,22 +362,22 @@ def render_ui(frame, current_time, live_gesture):
     s_w = (s_right - s_left) + 45
     s_x2 = bar_x2 - 25
     s_x1 = s_x2 - s_w
-    s_y1 = bar_y1 + 18
-    s_y2 = s_y1 + 34
+    s_y1 = bar_y1 + 16
+    s_y2 = s_y1 + 32
 
     streak_bg = (60, 42, 10, 240) if streak > 0 else (25, 28, 38, 220)
     streak_border = (255, 190, 0, 255) if streak > 0 else (55, 65, 85, 255)
     draw.rounded_rectangle([s_x1, s_y1, s_x2, s_y2], radius=10, fill=streak_bg, outline=streak_border, width=1)
     
     star_col = (255, 210, 50, 255) if streak > 0 else (120, 130, 150, 255)
-    draw.ellipse([s_x1 + 12, s_y1 + 12, s_x1 + 22, s_y1 + 22], fill=star_col)
-    draw.text((s_x1 + 28, s_y1 + 5), streak_str, font=FONT_LABEL_BOLD, fill=star_col)
+    draw.ellipse([s_x1 + 12, s_y1 + 11, s_x1 + 22, s_y1 + 21], fill=star_col)
+    draw.text((s_x1 + 28, s_y1 + 4), streak_str, font=FONT_LABEL_BOLD, fill=star_col)
 
     # History Pills
-    draw.text((s_x2 - 210, bar_y1 + 72), "RECENT:", font=FONT_LABEL, fill=(140, 150, 175, 255), anchor="lm")
+    draw.text((s_x2 - 210, bar_y1 + 68), "RECENT:", font=FONT_LABEL, fill=(140, 150, 175, 255), anchor="lm")
     hx = s_x2 - 130
     badge_size = 22
-    by = bar_y1 + 61
+    by = bar_y1 + 57
     for res in match_history:
         if res == 'W':
             col = (0, 240, 140, 255)
@@ -342,51 +393,138 @@ def render_ui(frame, current_time, live_gesture):
         hx += 26
 
     # -------------------------------------------------------------
-    # B. LIVE HAND STATUS FLOATING WIDGET (Bottom-Left)
+    # B. ARENA 3-COLUMN LAYOUT: (YOUR CARD | CAMERA VIEWPORT | AI CARD)
     # -------------------------------------------------------------
-    hw_x1, hw_y1, hw_x2, hw_y2 = 30, h - 145, 300, h - 85
-    draw.rounded_rectangle([hw_x1, hw_y1, hw_x2, hw_y2], radius=15, fill=(15, 17, 24, 210), outline=(50, 60, 80, 255), width=2)
+    arena_y = 140
+    arena_h = h - arena_y - 85
+
+    # 1. Center Camera Viewport with EXACT 100% Natural Aspect Ratio (No distortion)
+    frame_h, frame_w, _ = frame.shape
+    cam_aspect = frame_w / frame_h if frame_h > 0 else (16 / 9)
+
+    cam_h = min(arena_h - 20, 520)
+    cam_w = int(cam_h * cam_aspect)
+
+    # If camera box is too wide, fit by width
+    max_cam_w = int(w * 0.52)
+    if cam_w > max_cam_w:
+        cam_w = max_cam_w
+        cam_h = int(cam_w / cam_aspect)
+
+    cam_x = (w - cam_w) // 2
+    cam_y = arena_y + (arena_h - cam_h) // 2
+
+    # Resize the camera frame maintaining exact natural proportions
+    resized_cam = cv2.resize(frame, (cam_w, cam_h))
+    cam_pil = Image.fromarray(cv2.cvtColor(resized_cam, cv2.COLOR_BGR2RGB)).convert("RGBA")
     
-    if live_gesture:
-        draw.ellipse([hw_x1 + 18, hw_y1 + 22, hw_x1 + 30, hw_y1 + 34], fill=(0, 255, 150, 255))
-        draw.text((hw_x1 + 38, hw_y1 + 14), "HAND DETECTED", font=FONT_LABEL, fill=(0, 255, 150, 255))
-        draw.text((hw_x1 + 38, hw_y1 + 32), live_gesture, font=FONT_LABEL_BOLD, fill=(255, 255, 255, 255))
+    # Paste camera feed into studio canvas
+    pil_frame.paste(cam_pil, (cam_x, cam_y))
+
+    # Camera Frame Glowing Border
+    draw.rounded_rectangle([cam_x - 3, cam_y - 3, cam_x + cam_w + 3, cam_y + cam_h + 3], radius=16, outline=(0, 220, 255, 200), width=2)
+    draw.text((cam_x + 15, cam_y + 14), "LIVE HAND VIEW", font=FONT_LABEL_BOLD, fill=(0, 220, 255, 255))
+
+    # Floating Live Gesture Badge inside Camera Box
+    badge_str = f"STATUS: {live_gesture}" if live_gesture else "STATUS: SEARCHING..."
+    b_col = (0, 255, 150, 255) if live_gesture else (255, 180, 50, 255)
+    draw.rounded_rectangle([cam_x + 15, cam_y + cam_h - 40, cam_x + 230, cam_y + cam_h - 12], radius=8, fill=(15, 18, 28, 220), outline=b_col, width=1)
+    draw.ellipse([cam_x + 25, cam_y + cam_h - 30, cam_x + 35, cam_y + cam_h - 20], fill=b_col)
+    draw.text((cam_x + 42, cam_y + cam_h - 35), badge_str, font=FONT_LABEL, fill=b_col)
+
+    # 2. Left Column: YOUR ACTION CARD (Beside camera, never overlapping)
+    card_w = cam_x - 50
+    card_x1 = 30
+    card_y1 = cam_y
+    card_y2 = cam_y + cam_h
+
+    # Card Background Frame (Cyan Theme)
+    draw.rounded_rectangle([card_x1 - 2, card_y1 - 2, card_x1 + card_w + 2, card_y2 + 2], radius=18, fill=(0, 240, 255, 30))
+    draw.rounded_rectangle([card_x1, card_y1, card_x1 + card_w, card_y2], radius=16, fill=(15, 22, 34, 245), outline=(0, 220, 255, 255), width=2)
+
+    draw.text((card_x1 + card_w // 2, card_y1 + 35), "YOUR ACTION", font=FONT_CARD_TITLE, fill=(0, 220, 255, 255), anchor="mm")
+    draw.text((card_x1 + card_w // 2, card_y1 + 65), f"PLAYER: {player_name.upper()}", font=FONT_LABEL, fill=(160, 180, 210, 255), anchor="mm")
+
+    # Center Gesture Display Box
+    p_box_y1 = card_y1 + 100
+    p_box_y2 = card_y2 - 60
+    draw.rounded_rectangle([card_x1 + 20, p_box_y1, card_x1 + card_w - 20, p_box_y2], radius=14, fill=(22, 32, 50, 240), outline=(50, 75, 110, 255), width=1)
+
+    if game_state == STATE_SHOW_RESULT:
+        p_display = player_move if player_move else "NO MOVE"
+        p_display_col = (0, 255, 180, 255) if player_move else (255, 70, 70, 255)
+        p_status_msg = "FINAL MOVE"
     else:
-        pulse_alpha = int(150 + 105 * math.sin(current_time * 5))
-        draw.ellipse([hw_x1 + 18, hw_y1 + 22, hw_x1 + 30, hw_y1 + 34], fill=(255, 160, 0, pulse_alpha))
-        draw.text((hw_x1 + 38, hw_y1 + 14), "SEARCHING HAND...", font=FONT_LABEL, fill=(255, 180, 50, 255))
-        draw.text((hw_x1 + 38, hw_y1 + 32), "Show hand in camera", font=FONT_LABEL, fill=(160, 170, 190, 255))
+        p_display = live_gesture if live_gesture else "WAITING"
+        p_display_col = (0, 220, 255, 255) if live_gesture else (120, 140, 170, 255)
+        p_status_msg = "TRACKING GESTURE"
+
+    draw.text((card_x1 + card_w // 2, (p_box_y1 + p_box_y2) // 2), p_display, font=FONT_CARD_MOVE, fill=p_display_col, anchor="mm")
+    draw.text((card_x1 + card_w // 2, card_y2 - 30), p_status_msg, font=FONT_LABEL_BOLD, fill=(180, 200, 230, 255), anchor="mm")
+
+    # 3. Right Column: AI OPPONENT CARD (Beside camera, never overlapping)
+    ai_card_x1 = cam_x + cam_w + 20
+    ai_card_w = w - ai_card_x1 - 30
+    ai_card_y1 = cam_y
+    ai_card_y2 = cam_y + cam_h
+
+    # Card Background Frame (Magenta Theme)
+    draw.rounded_rectangle([ai_card_x1 - 2, ai_card_y1 - 2, ai_card_x1 + ai_card_w + 2, ai_card_y2 + 2], radius=18, fill=(255, 60, 130, 30))
+    draw.rounded_rectangle([ai_card_x1, ai_card_y1, ai_card_x1 + ai_card_w, ai_card_y2], radius=16, fill=(32, 14, 26, 245), outline=(255, 60, 130, 255), width=2)
+
+    draw.text((ai_card_x1 + ai_card_w // 2, ai_card_y1 + 35), "AI OPPONENT", font=FONT_CARD_TITLE, fill=(255, 80, 140, 255), anchor="mm")
+    draw.text((ai_card_x1 + ai_card_w // 2, ai_card_y1 + 65), f"NEURAL BOT ({ai_mode.upper()})", font=FONT_LABEL, fill=(220, 160, 190, 255), anchor="mm")
+
+    ai_box_y1 = ai_card_y1 + 100
+    ai_box_y2 = ai_card_y2 - 60
+    draw.rounded_rectangle([ai_card_x1 + 20, ai_box_y1, ai_card_x1 + ai_card_w - 20, ai_box_y2], radius=14, fill=(48, 20, 38, 240), outline=(110, 50, 85, 255), width=1)
+
+    if game_state == STATE_SHOW_RESULT:
+        ai_display = ai_move if ai_move else "NONE"
+        ai_display_col = (255, 100, 160, 255)
+        ai_status_msg = "COUNTER REVEALED"
+    elif game_state == STATE_COUNTDOWN:
+        ai_display = "DECIDING..."
+        ai_display_col = (255, 180, 80, 255)
+        ai_status_msg = "CALCULATING ODDS"
+    else:
+        ai_display = "READY"
+        ai_display_col = (180, 140, 170, 255)
+        ai_status_msg = "AWAITING ROUND"
+
+    draw.text((ai_card_x1 + ai_card_w // 2, (ai_box_y1 + ai_box_y2) // 2), ai_display, font=FONT_CARD_MOVE, fill=ai_display_col, anchor="mm")
+    draw.text((ai_card_x1 + ai_card_w // 2, ai_card_y2 - 30), ai_status_msg, font=FONT_LABEL_BOLD, fill=(230, 180, 210, 255), anchor="mm")
 
     # -------------------------------------------------------------
-    # C. CENTER ARENA STATE DISPLAYS
+    # C. CENTER COUNTDOWN / RESULT OVERLAYS
     # -------------------------------------------------------------
     if game_state == STATE_IDLE:
-        prompt_w, prompt_h = 480, 110
-        px1 = (w - prompt_w) // 2
-        py1 = (h - prompt_h) // 2 + 10
+        prompt_w, prompt_h = 380, 80
+        px1 = cam_x + (cam_w - prompt_w) // 2
+        py1 = cam_y + (cam_h - prompt_h) // 2
+
+        draw.rounded_rectangle([px1 - 3, py1 - 3, px1 + prompt_w + 3, py1 + prompt_h + 3], radius=18, fill=(0, 220, 255, 40))
+        draw.rounded_rectangle([px1, py1, px1 + prompt_w, py1 + prompt_h], radius=16, fill=(15, 18, 28, 235), outline=(0, 220, 255, 255), width=2)
         
-        draw.rounded_rectangle([px1 - 4, py1 - 4, px1 + prompt_w + 4, py1 + prompt_h + 4], radius=24, fill=(0, 220, 255, 40))
-        draw.rounded_rectangle([px1, py1, px1 + prompt_w, py1 + prompt_h], radius=20, fill=(15, 18, 28, 230), outline=(0, 220, 255, 255), width=2)
-        
-        draw.text((px1 + prompt_w // 2, py1 + 28), f"READY, {player_name.upper()}?", font=FONT_LABEL_BOLD, fill=(0, 220, 255, 255), anchor="mm")
-        draw.text((px1 + prompt_w // 2, py1 + 68), "Press [SPACE] to Start Round", font=FONT_TITLE, fill=(255, 255, 255, 255), anchor="mm")
+        draw.text((px1 + prompt_w // 2, py1 + 24), "ARE YOU READY?", font=FONT_LABEL_BOLD, fill=(0, 220, 255, 255), anchor="mm")
+        draw.text((px1 + prompt_w // 2, py1 + 54), "Press [SPACE] to Start", font=FONT_TITLE, fill=(255, 255, 255, 255), anchor="mm")
 
     elif game_state == STATE_COUNTDOWN:
         elapsed = current_time - state_start_time
         remaining = countdown_duration - elapsed
         progress = max(0.0, min(1.0, elapsed / countdown_duration))
 
-        center_x = w // 2
-        center_y = h // 2
+        c_cx = cam_x + cam_w // 2
+        c_cy = cam_y + cam_h // 2
 
-        gauge_radius = 110
-        bbox = [center_x - gauge_radius, center_y - gauge_radius, center_x + gauge_radius, center_y + gauge_radius]
+        gauge_r = min(cam_h // 3, 90)
+        bbox = [c_cx - gauge_r, c_cy - gauge_r, c_cx + gauge_r, c_cy + gauge_r]
         
-        draw.ellipse(bbox, outline=(40, 50, 70, 180), width=10)
+        draw.ellipse(bbox, outline=(40, 50, 70, 200), width=8)
         start_angle = -90
         end_angle = start_angle + (360 * (1.0 - progress))
         if end_angle > start_angle:
-            draw.arc(bbox, start=start_angle, end=end_angle, fill=(0, 255, 230, 255), width=10)
+            draw.arc(bbox, start=start_angle, end=end_angle, fill=(0, 255, 230, 255), width=8)
 
         if remaining > 2.0:
             count_str = "3"
@@ -401,85 +539,59 @@ def render_ui(frame, current_time, live_gesture):
             count_str = "GO!"
             color = (0, 255, 140, 255)
 
-        draw.text((center_x, center_y), count_str, font=FONT_BIG_COUNT, fill=color, anchor="mm")
-        draw.text((center_x, center_y + gauge_radius + 30), "SHOW GESTURE NOW!", font=FONT_LABEL_BOLD, fill=(255, 255, 255, 255), anchor="mm")
+        draw.text((c_cx, c_cy), count_str, font=FONT_BIG_COUNT, fill=color, anchor="mm")
+        draw.text((c_cx, c_cy + gauge_r + 25), "SHOW GESTURE NOW!", font=FONT_LABEL_BOLD, fill=(255, 255, 255, 255), anchor="mm")
 
     elif game_state == STATE_SHOW_RESULT:
-        card_w, card_h = 320, 200
-        card_y = (h - card_h) // 2 - 20
-        
-        # Player Card
-        p_card_x = 50
-        p_color = (0, 240, 255, 255) if player_move else (255, 70, 70, 255)
-        draw.rounded_rectangle([p_card_x - 3, card_y - 3, p_card_x + card_w + 3, card_y + card_h + 3], radius=18, fill=(0, 240, 255, 40))
-        draw.rounded_rectangle([p_card_x, card_y, p_card_x + card_w, card_y + card_h], radius=16, fill=(12, 20, 32, 235), outline=p_color, width=2)
-        
-        draw.text((p_card_x + 25, card_y + 20), f"{player_name.upper()}'S MOVE", font=FONT_CARD_TITLE, fill=(0, 220, 255, 255))
-        p_text = player_move if player_move else "NO GESTURE"
-        draw.text((p_card_x + 25, card_y + 70), p_text, font=FONT_CARD_MOVE, fill=(255, 255, 255, 255))
-        draw.text((p_card_x + 25, card_y + 135), "PLAYER 1", font=FONT_LABEL, fill=(140, 160, 190, 255))
-
-        # AI Card
-        ai_card_x = w - card_w - 50
-        ai_color = (255, 60, 130, 255)
-        draw.rounded_rectangle([ai_card_x - 3, card_y - 3, ai_card_x + card_w + 3, card_y + card_h + 3], radius=18, fill=(255, 60, 130, 40))
-        draw.rounded_rectangle([ai_card_x, card_y, ai_card_x + card_w, card_y + card_h], radius=16, fill=(28, 12, 24, 235), outline=ai_color, width=2)
-        
-        draw.text((ai_card_x + 25, card_y + 20), "AI MOVE", font=FONT_CARD_TITLE, fill=(255, 80, 140, 255))
-        draw.text((ai_card_x + 25, card_y + 70), ai_move if ai_move else "NONE", font=FONT_CARD_MOVE, fill=(255, 255, 255, 255))
-        draw.text((ai_card_x + 25, card_y + 135), "NEURAL BOT", font=FONT_LABEL, fill=(200, 150, 180, 255))
-
-        # Center Result Banner
-        banner_w, banner_h = 440, 140
-        bx = (w - banner_w) // 2
-        by = (h - banner_h) // 2 - 20
+        banner_w, banner_h = min(cam_w - 40, 480), 120
+        bx = cam_x + (cam_w - banner_w) // 2
+        by = cam_y + (cam_h - banner_h) // 2 - 10
 
         if round_result == "PLAYER":
             res_title = "VICTORY!"
-            res_sub = f"+1 Point to {player_name}"
-            banner_bg = (10, 45, 30, 240)
+            res_sub = f"+1 Point to {player_name.upper()}"
+            banner_bg = (10, 45, 30, 245)
             banner_border = (0, 255, 140, 255)
             text_color = (0, 255, 160, 255)
         elif round_result == "AI":
             res_title = "AI WINS!"
             res_sub = "+1 Point to AI Bot"
-            banner_bg = (45, 10, 20, 240)
+            banner_bg = (45, 10, 20, 245)
             banner_border = (255, 60, 80, 255)
             text_color = (255, 75, 95, 255)
         elif round_result == "TIE":
             res_title = "DRAW MATCH!"
             res_sub = "Both chose the same move"
-            banner_bg = (45, 35, 10, 240)
+            banner_bg = (45, 35, 10, 245)
             banner_border = (255, 200, 0, 255)
             text_color = (255, 215, 0, 255)
         else:
             res_title = "NO DETECTION"
-            res_sub = "Keep hand clear in front of camera"
-            banner_bg = (35, 20, 10, 240)
+            res_sub = "Keep hand visible in camera box"
+            banner_bg = (35, 20, 10, 245)
             banner_border = (255, 120, 0, 255)
             text_color = (255, 140, 30, 255)
 
-        draw.rounded_rectangle([bx - 4, by - 4, bx + banner_w + 4, by + banner_h + 4], radius=22, fill=banner_border)
-        draw.rounded_rectangle([bx, by, bx + banner_w, by + banner_h], radius=20, fill=banner_bg)
+        draw.rounded_rectangle([bx - 3, by - 3, bx + banner_w + 3, by + banner_h + 3], radius=20, fill=banner_border)
+        draw.rounded_rectangle([bx, by, bx + banner_w, by + banner_h], radius=18, fill=banner_bg)
 
-        draw.text((bx + banner_w // 2, by + 45), res_title, font=FONT_BANNER, fill=text_color, anchor="mm")
-        draw.text((bx + banner_w // 2, by + 95), res_sub, font=FONT_SUB_BANNER, fill=(220, 230, 240, 255), anchor="mm")
+        draw.text((bx + banner_w // 2, by + 40), res_title, font=FONT_BANNER, fill=text_color, anchor="mm")
+        draw.text((bx + banner_w // 2, by + 85), res_sub, font=FONT_SUB_BANNER, fill=(220, 230, 240, 255), anchor="mm")
 
-        time_left = max(0.0, result_display_duration - (current_time - state_start_time))
-        bar_progress = time_left / result_display_duration
-        draw.line([(bx + 20, by + banner_h - 6), (bx + 20 + int((banner_w - 40) * bar_progress), by + banner_h - 6)], fill=banner_border, width=4)
+        prompt_next = "Press [SPACE] for Next Round"
+        draw.text((bx + banner_w // 2, by + banner_h + 30), prompt_next, font=FONT_LABEL_BOLD, fill=(0, 255, 220, 255), anchor="mm")
 
     # -------------------------------------------------------------
     # D. BOTTOM CONTROLS DOCK (Sleek Glass Dock)
     # -------------------------------------------------------------
-    dock_h = 50
+    dock_h = 46
     dock_w = min(w - 60, 1080)
     dx1 = (w - dock_w) // 2
-    dy1 = h - dock_h - 18
+    dy1 = h - dock_h - 16
     dx2 = dx1 + dock_w
     dy2 = dy1 + dock_h
 
-    draw.rounded_rectangle([dx1, dy1, dx2, dy2], radius=15, fill=(15, 17, 24, 215), outline=(50, 60, 80, 255), width=1)
+    draw.rounded_rectangle([dx1, dy1, dx2, dy2], radius=14, fill=(15, 17, 24, 225), outline=(50, 60, 80, 255), width=1)
     
     controls = [
         ("[SPACE]", "Play Round"),
@@ -495,7 +607,7 @@ def render_ui(frame, current_time, live_gesture):
         text = f"{key_label} {desc}"
         left, top, right, bottom = draw.textbbox((0, 0), text, font=FONT_LABEL)
         tw = right - left
-        draw.text((cx - tw // 2, dy1 + 14), text, font=FONT_LABEL, fill=(210, 220, 240, 255))
+        draw.text((cx - tw // 2, dy1 + 13), text, font=FONT_LABEL, fill=(210, 220, 240, 255))
 
     final_img = Image.alpha_composite(pil_frame, overlay)
     return cv2.cvtColor(np.array(final_img.convert("RGB")), cv2.COLOR_RGB2BGR)
@@ -522,15 +634,16 @@ while cap.isOpened():
     frame = cv2.flip(frame, 1)
     current_time = time.time()
 
-    # Process hand landmarks
-    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    results = hands.process(rgb_frame)
-
+    # Process hand landmarks only during active gameplay
     live_gesture = None
-    if results.multi_hand_landmarks:
-        for hand_landmarks in results.multi_hand_landmarks:
-            draw_cyber_hand(frame, hand_landmarks)
-            live_gesture = detect_gesture(hand_landmarks)
+    if game_state not in [STATE_NAME_INPUT, STATE_SESSION_CHOICE]:
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = hands.process(rgb_frame)
+
+        if results.multi_hand_landmarks:
+            for hand_landmarks in results.multi_hand_landmarks:
+                draw_cyber_hand(frame, hand_landmarks)
+                live_gesture = detect_gesture(hand_landmarks)
 
     # --- STATE TRANSITIONS ---
     if game_state == STATE_COUNTDOWN:
@@ -563,10 +676,6 @@ while cap.isOpened():
             game_state = STATE_SHOW_RESULT
             state_start_time = current_time
 
-    elif game_state == STATE_SHOW_RESULT:
-        if current_time - state_start_time > result_display_duration:
-            game_state = STATE_IDLE
-
     # Render Cyber UI
     display_frame = render_ui(frame, current_time, live_gesture)
 
@@ -579,10 +688,20 @@ while cap.isOpened():
     if game_state == STATE_NAME_INPUT:
         if key == 13:  # ENTER
             chosen_name = input_text.strip() if input_text.strip() else "Player 1"
-            switch_to_player(chosen_name)
-            game_state = STATE_IDLE
+            all_players = load_all_players()
+            if chosen_name in all_players:
+                temp_player_name = chosen_name
+                p_data = all_players[chosen_name]
+                prev_score_player = p_data.get("score_player", 0)
+                prev_score_ai = p_data.get("score_ai", 0)
+                prev_score_ties = p_data.get("score_ties", 0)
+                prev_best_streak = p_data.get("best_streak", 0)
+                game_state = STATE_SESSION_CHOICE
+            else:
+                switch_to_player(chosen_name, resume_scores=False)
+                game_state = STATE_IDLE
         elif key == 27:  # ESC (Use Guest)
-            switch_to_player("Guest")
+            switch_to_player("Guest", resume_scores=False)
             game_state = STATE_IDLE
         elif key == 8:  # BACKSPACE
             input_text = input_text[:-1]
@@ -590,7 +709,19 @@ while cap.isOpened():
             input_text += chr(key)
         continue
 
-    # 2. In-Game Controls
+    # 2. Returning Player Choice: Start New vs Resume
+    elif game_state == STATE_SESSION_CHOICE:
+        if key == 13 or key == ord('n') or key == ord('N'):  # ENTER or N: Start Fresh
+            switch_to_player(temp_player_name, resume_scores=False)
+            game_state = STATE_IDLE
+        elif key == ord('c') or key == ord('C'):  # C: Continue / Resume
+            switch_to_player(temp_player_name, resume_scores=True)
+            game_state = STATE_IDLE
+        elif key == 27 or key == ord('b') or key == ord('B'):  # ESC: Back
+            game_state = STATE_NAME_INPUT
+        continue
+
+    # 3. In-Game Controls
     if key == ord('q') or key == ord('Q'):
         save_current_player()
         break
@@ -602,8 +733,8 @@ while cap.isOpened():
         is_fullscreen = not is_fullscreen
         prop = cv2.WINDOW_FULLSCREEN if is_fullscreen else cv2.WINDOW_NORMAL
         cv2.setWindowProperty(WINDOW_NAME, cv2.WND_PROP_FULLSCREEN, prop)
-    elif key == 32:  # SPACE
-        if game_state == STATE_IDLE:
+    elif key == 32:  # SPACE - Start Round from IDLE or RESULT
+        if game_state in [STATE_IDLE, STATE_SHOW_RESULT]:
             game_state = STATE_COUNTDOWN
             state_start_time = time.time()
     elif key == ord('d') or key == ord('D'):
