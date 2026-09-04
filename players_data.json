@@ -1,0 +1,40 @@
+{
+    "Manodya": {
+        "score_player": 1,
+        "score_ai": 5,
+        "score_ties": 2,
+        "best_streak": 1,
+        "transitions": {
+            "PAPER": {
+                "ROCK": 2,
+                "PAPER": 1,
+                "SCISSORS": 3
+            },
+            "SCISSORS": {
+                "ROCK": 1,
+                "PAPER": 3,
+                "SCISSORS": 1
+            },
+            "ROCK": {
+                "ROCK": 1,
+                "PAPER": 1,
+                "SCISSORS": 2
+            }
+        },
+        "last_played": "2026-09-04 20:45:35"
+    },
+    "Sasmini": {
+        "score_player": 0,
+        "score_ai": 1,
+        "score_ties": 1,
+        "best_streak": 0,
+        "transitions": {
+            "PAPER": {
+                "ROCK": 1,
+                "PAPER": 1,
+                "SCISSORS": 2
+            }
+        },
+        "last_played": "2026-09-04 20:43:01"
+    }
+}
