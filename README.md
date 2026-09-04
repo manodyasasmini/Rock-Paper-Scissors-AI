@@ -41,12 +41,13 @@ An interactive, real-time Computer Vision game that lets you play **Rock-Paper-S
   - Tracks player transition patterns between moves in real-time.
   - Anticipates the user's next gesture based on past behavioral probability and counters it dynamically.
   - Toggle between **Predictive AI** and **Random AI** on the fly.
-- 🎨 **Esports Cyberpunk HUD**:
-  - Crisp typography rendered via TrueType fonts and PIL RGBA alpha blending.
+- 🎨 **3-Column Arena & Cyberpunk HUD**:
+  - Crisp TrueType typography rendered via PIL RGBA alpha blending.
+  - Dedicated center camera viewport with 100% natural aspect ratio and live skeletal tracking.
+  - Unobstructed side-by-side **Player** and **AI** action cards.
   - Animated 360° circular radial countdown timer.
   - Live scoreboard with Win Streaks and recent match outcome pills (`W` / `L` / `D`).
-  - Interactive split-screen move showdown cards.
-- 🖥️ **Full-Screen Responsive**: Seamlessly adapts to full screen and standard window modes with the press of a key.
+- 🖥️ **Full-Screen Responsive**: Seamlessly adapts to full screen and standard window modes with the press of `[F]`.
 
 ---
 
@@ -71,14 +72,14 @@ An interactive, real-time Computer Vision game that lets you play **Rock-Paper-S
                    │
                    ▼
        [ Game State Machine ]
-    (IDLE ➔ COUNTDOWN ➔ EVALUATE ➔ RESULT)
+    (LOGIN ➔ READY ➔ COUNTDOWN ➔ RESULT)
                    │
                    ├───────────────┐
                    ▼               ▼
         [ Markov Chain AI ]   [ Score & Streak Tracker ]
                    │
                    ▼
-   [ PIL + OpenCV HUD Renderer ] ──► [ Fullscreen Display ]
+   [ PIL + OpenCV HUD Renderer ] ──► [ Fullscreen Arena Display ]
 ```
 
 ---
@@ -100,8 +101,8 @@ An interactive, real-time Computer Vision game that lets you play **Rock-Paper-S
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/your-username/rock-paper-scissors-ai.git
-cd rock-paper-scissors-ai
+git clone https://github.com/manodyasasmini/Rock-Paper-Scissors-AI.git
+cd Rock-Paper-Scissors-AI
 ```
 
 ### 2. Set up virtual environment
