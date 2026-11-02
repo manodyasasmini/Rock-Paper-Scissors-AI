@@ -330,12 +330,20 @@ This estimates about 20 FPS for the current game, below the 24 FPS target. UI re
 
 **Done when:** the player says the screen looks right. Cutting the hands out of the artwork worked automatically using the white sticker outline, but I have only seen it on a stand-in camera picture, not your webcam.
 
-### Phase 3: New interface
-- [ ] Theme, fonts, panels, new layout at any resolution, all screens
-- [ ] Fix the misleading labels and the input and quit handling
+### Phase 3: New interface (design decided, not built yet)
+Decisions so far, from reviewing `design/ui-mockup.html`:
+- **Light mode.** Soft white background, white cards, deep blue for the player and rose for the AI. The older dark neon look is dropped.
+- **Dark where the artwork needs it.** The three move tiles and the AI's panel stay dark (navy and purple), because the hand pictures have white outlines and were drawn for dark backgrounds. They stand out well against the light screen.
+- **Camera skeleton** is drawn in blue over a white halo, so it shows on any room.
+- **Credit line:** "Created by SMS Abeyrathne · 235501H · BSc (Hons) Artificial Intelligence" on the start screen and under the match summary. The game itself doesn't mention any event or the university.
+- **Still to decide:** which suggested screens to build (start screen, camera check, chant countdown, round-by-round, leaderboard, camera problem, admin, privacy mode) and which arrangement of the main screen to use. Waiting for notes on the mockup.
+
+Work once the design is final:
+- [ ] Move every colour into one theme definition, so screens don't hardcode them
+- [ ] Rebuild the screens in light mode, at any resolution
 - [ ] Performance pass against the 24 FPS target
 
-**Done when:** it looks like the new design, using the old AI, at target FPS on 720p and 1080p.
+**Done when:** it looks like the approved mockup, at target FPS on 720p and 1080p.
 
 ### Phase 4: Prediction engine (done, pending real play-tests)
 - [x] Four experts (frequency, last move, last two moves, win-stay/lose-shift) with decay, smoothing, track-record weighting and an expected-score choice (`ai/engine.py`)

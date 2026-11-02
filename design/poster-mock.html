@@ -96,7 +96,10 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;align-
 .team{position:absolute;left:315px;width:670px;top:62px;text-align:center;color:var(--gold);font-weight:800;font-size:38px;letter-spacing:2px}
 .members{position:absolute;left:150px;width:1000px;top:130px;display:flex;justify-content:space-between;padding:0 10px}
 .members div{width:176px;text-align:center;color:#fff;font-weight:700;font-size:18px;letter-spacing:2.3px;line-height:1.5}
-.uline{position:absolute;left:531px;top:204px;width:238px;height:3px;background:var(--gold)}
+.who{position:absolute;left:315px;width:670px;top:128px;text-align:center;color:#fff;line-height:1.7}
+.who b{display:block;font-weight:700;font-size:30px;letter-spacing:4px}
+.who span{display:block;font-weight:500;font-size:24px;letter-spacing:2.5px;color:#dfe5f7}
+.uline{position:absolute;left:530px;top:228px;width:240px;height:3px;background:var(--gold)}
 .qr{position:absolute;left:1301px;top:30px;width:254px;height:226px;border-radius:22px;background:#c9cfdc;color:#161a24;display:grid;place-items:center;text-align:center;font-weight:800;font-size:23px;letter-spacing:3px;line-height:1.5;padding:20px}
 .qr small{display:block;font-weight:500;font-size:13px;letter-spacing:.5px;margin-top:8px;color:#3a4050}
 .todo-dark{outline:2px dashed rgba(245,197,24,.75);outline-offset:6px;border-radius:4px}
@@ -228,10 +231,8 @@ body.nomarks .mk{display:none}
 
         <div class="stripe" style="top:1945px"></div>
         <div class="ftr" data-mk="10" data-mx="60" data-my="2060">
-          <div class="team todo-dark">TEAM NAME</div>
-          <div class="members">
-            <div class="todo-dark">MEMBER NAME<br>MEMBER INDEX</div><div class="todo-dark">MEMBER NAME<br>MEMBER INDEX</div><div class="todo-dark">MEMBER NAME<br>MEMBER INDEX</div><div class="todo-dark">MEMBER NAME<br>MEMBER INDEX</div><div class="todo-dark">MEMBER NAME<br>MEMBER INDEX</div>
-          </div>
+          <div class="team">SMS ABEYRATHNE</div>
+          <div class="who"><b>235501H</b><span>BSc (Hons) Artificial Intelligence</span></div>
           <div class="uline"></div>
           <div class="qr todo-dark"><div>ADD YOUR QR HERE<small>suggestion: the GitHub repository</small></div></div>
         </div>
@@ -245,7 +246,7 @@ body.nomarks .mk{display:none}
       <p>Things only you can supply (shown <span class="todo-key">yellow</span> or dashed on the poster):</p>
       <ul>
         <li>University crest and the FIT 25th anniversary logo (the template has them)</li>
-        <li>Team name, member names and index numbers</li>
+        <li>Your name, index number and degree are filled in as you gave them. Check the spelling</li>
         <li>A QR code (the GitHub repository is a good target)</li>
         <li>Real screenshots of the finished game</li>
         <li>Results from the expo trial</li>
@@ -293,7 +294,7 @@ const SECTIONS = [
   [7,"System architecture","The block diagram, same style as the template.","Is the diagram clear? Do you want more or less detail?"],
   [8,"Technologies used","What it is built with.","Anything missing from your tech stack?"],
   [9,"Impact, results & next steps","Simulation results now, expo results later.","Do you want to show the simulation numbers at all?"],
-  [10,"Team and QR","Team name, five members, QR code.","How many members? What should the QR point to?"]
+  [10,"Your details and QR","Your name, index number and degree, and a QR code.","Is the wording right? What should the QR point to?"]
 ];
 function placeMarks(){
   poster.querySelectorAll(".mk").forEach(m=>m.remove());

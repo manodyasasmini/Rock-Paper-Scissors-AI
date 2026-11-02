@@ -132,3 +132,9 @@ python rps_game.py
 - **Computer Vision**: OpenCV, Google MediaPipe
 - **Machine Learning / AI**: Discrete-time Markov Chains, Transition Probability Matrices
 - **Graphics & UI**: PIL (Pillow), Alpha Compositing, Bézier & Radial Arc geometry
+
+---
+
+## 👤 Author
+
+**SMS Abeyrathne** · 235501H · BSc (Hons) Artificial Intelligence
