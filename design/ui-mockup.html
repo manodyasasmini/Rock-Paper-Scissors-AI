@@ -261,12 +261,11 @@ const trophy = (c,s) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24"><pa
 function leaderboard(){
   let h = A(740,40,500,640,"card","","border-top:6px solid "+K.amber);
   h += T(768,84,"LEADERBOARD",{s:26,b:1,c:K.ink}) + T(768,112,"Who beat the AI most · best score in 15 rounds",{s:13.5,c:K.muted});
-  h += T(782,146,"#",{s:11,b:1,c:K.faint,st:"letter-spacing:2px"}) + T(868,146,"PLAYER",{s:11,b:1,c:K.faint,st:"letter-spacing:2px"}) + T(1208,146,"WON – LOST",{s:11,b:1,c:K.faint,al:"r",st:"letter-spacing:2px"});
+  h += T(782,146,"#",{s:11,b:1,c:K.faint,st:"letter-spacing:2px"}) + T(840,146,"PLAYER",{s:11,b:1,c:K.faint,st:"letter-spacing:2px"}) + T(1208,146,"WON – LOST",{s:11,b:1,c:K.faint,al:"r",st:"letter-spacing:2px"});
   LB.forEach(([n,v,m],i)=>{ const y=162+i*57, top=i===0;
     h += A(756,y,468,50,"","",`border-radius:14px;background:${top?K.amberT:"#f6f8fc"};${top?"border:2px solid "+K.amber:""}`);
     h += i<3 ? A(762,y+3,44,44,"",trophy(MEDAL[i],44),"display:grid;place-items:center") : T(785,y+26,i+1,{s:19,b:1,c:K.faint,al:"c"});
-    h += A(816,y+6,38,38,"tile lit p",img(m,34,"top:2px;opacity:1"),"border-width:1px;border-radius:10px");
-    h += T(868,y+26,n,{s:21,b:1,c:K.ink}) + T(1204,y+26,v,{s:21,b:1,c:top?K.amberD:K.ink2,al:"r"});
+    h += T(840,y+26,n,{s:21,b:1,c:K.ink}) + T(1204,y+26,v,{s:21,b:1,c:top?K.amberD:K.ink2,al:"r"});
   });
   h += T(990,652,"Your name could be here",{s:14,b:1,c:K.faint,al:"c"});
   return h;

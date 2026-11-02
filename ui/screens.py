@@ -232,7 +232,7 @@ def _start(session, L, now):
     c.text(768, 84, "LEADERBOARD", 26, theme.INK, True)
     c.text(768, 112, "Who beat the AI most · best score in a match", 13.5, theme.MUTED)
     c.spaced(782, 146, "#", 11, theme.FAINT, spacing=2, anchor="l")
-    c.spaced(868, 146, "PLAYER", 11, theme.FAINT, spacing=2, anchor="l")
+    c.spaced(840, 146, "PLAYER", 11, theme.FAINT, spacing=2, anchor="l")
     c.spaced(1208, 146, "WON – LOST", 11, theme.FAINT, spacing=2, anchor="rm")
     rows = session.leaderboard_rows
     for i, (name, best) in enumerate(rows):
@@ -247,8 +247,7 @@ def _start(session, L, now):
             _trophy(c, 784, y + 25, 40, theme.MEDALS[i])
         else:
             c.text(785, y + 26, str(i + 1), 19, theme.FAINT, True, "mm")
-        _tile(c, 816, y + 6, 38, 38, best["fav"], "p", True)
-        c.text(868, y + 26, name.upper(), 21, theme.INK, True)
+        c.text(840, y + 26, name.upper(), 21, theme.INK, True)
         c.text(1204, y + 26, f"{best['wins']} – {best['losses']}", 21, theme.AMBER_D if top else theme.INK2, True, "rm")
     if rows:
         c.text(990, 652, "Your name could be here", 14, theme.FAINT, True, "mm")
