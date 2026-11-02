@@ -8,8 +8,8 @@ from vision.tracker import BlockDetector, frame_is_blocked
 def shutter_frame():
     """The grey picture a closed privacy shutter produces, with its small padlock icon."""
     frame = np.full((FRAME_H, FRAME_W, 3), 138, dtype=np.uint8)
-    cv2.rectangle(frame, (560, 300), (720, 420), (240, 240, 240), 4)
-    cv2.circle(frame, (640, 360), 20, (240, 240, 240), 4)
+    cv2.rectangle(frame, (500, 260), (780, 460), (240, 240, 240), 6)       # a big icon, larger than the real one
+    cv2.circle(frame, (640, 360), 40, (240, 240, 240), 6)
     return frame
 
 
@@ -59,3 +59,24 @@ def test_the_camera_check_screen_says_when_the_camera_is_blocked():
     session.camera_blocked = True
     blocked = render_ui(session, 1280, 720, 0.0, None, None)
     assert not np.array_equal(normal, blocked)
+
+
+def test_a_blocked_camera_is_named_in_the_middle_of_a_match_too():
+    import os, random, tempfile
+    from ai.engine import MarkovEngine
+    from game.session import KEY_ENTER, KEY_SPACE, GameSession
+    from game.settings import Settings
+    from game.store import PlayerStore
+    from ui.screens import render_ui
+
+    session = GameSession(PlayerStore(os.path.join(tempfile.mkdtemp(), "p.json")), MarkovEngine(rng=random.Random(1)), Settings())
+    session.handle_key(KEY_SPACE, 0)
+    session.handle_key(KEY_ENTER, 0)
+    session.handle_key(KEY_SPACE, 0)          # camera check skipped: the first round starts
+    session.update(session.countdown_duration, None)   # nothing seen: a missed round
+    plain_miss = render_ui(session, 1280, 720, 5.0, None, None)
+    session.camera_blocked = True
+    blocked_miss = render_ui(session, 1280, 720, 5.0, None, None)
+    chip_and_message = (slice(95, 130), slice(380, 460)), (slice(300, 560), slice(520, 760))
+    for rows, cols in chip_and_message:
+        assert not np.array_equal(plain_miss[rows, cols], blocked_miss[rows, cols])

@@ -54,7 +54,7 @@ class HandTracker:
         self.hands.close()
 
 
-def frame_is_blocked(frame, tolerance=6, share=0.95):
+def frame_is_blocked(frame, tolerance=8, share=0.90):
     """True if the picture is almost one flat colour: a closed privacy shutter, a covered lens or a dead camera.
 
     A shutter that draws a small icon on the grey still counts, because nearly every pixel is the same.

@@ -438,7 +438,9 @@ def _match(session, L, now, live_gesture, view):
     # ---- your card
     c.text(52, head, (session.player_name or "").upper(), 26, theme.PLAYER, True)
     hand = view is not None and view.hand_found
-    if revealed:
+    if session.camera_blocked:
+        _chip(c, 452, head, "Camera blocked", theme.AMBER_D, theme.AMBER_T)
+    elif revealed:
         if valid:
             _chip(c, 452, head, f"Final: {session.player_move}", theme.PLAYER_D, theme.PLAYER_T)
         else:
@@ -452,12 +454,12 @@ def _match(session, L, now, live_gesture, view):
 
     cx, cy, cw, ch = MATCH_CAM
     _camera(c, view, MATCH_CAM)
-    if state == STATE_COUNTDOWN:
+    if session.camera_blocked:
+        _pill(c, cx + cw / 2, cy + 32, "The camera is blocked", theme.AMBER_D, 14)
+    elif state == STATE_COUNTDOWN:
         _pill(c, cx + cw / 2, cy + 32, "Show your gesture on SHOOT!", theme.INK, 14)
     elif revealed and not valid:
         _pill(c, cx + cw / 2, cy + 32, "Hold your hand up before SHOOT", theme.AMBER_D, 14)
-    elif session.camera_blocked:
-        _pill(c, cx + cw / 2, cy + 32, "The camera is blocked", theme.AMBER_D, 14)
     elif not hand:
         _pill(c, cx + cw / 2, cy + 32, "Show your hand", theme.AMBER_D, 14)
 
@@ -555,12 +557,14 @@ def _middle(c, session, now, valid):
         c.text(640, t + 372, why, 15, theme.INK2, True, "mm")
         c.text(640, t + 396, delta, 14, colour, True, "mm")
     elif state == STATE_SHOW_RESULT:
-        c.text(640, t + 204, "MISSED IT", 30, theme.AMBER_D, True, "mm")
+        blocked = session.camera_blocked
+        c.text(640, t + 204, "CAMERA BLOCKED" if blocked else "MISSED IT", 30 if not blocked else 26, theme.AMBER_D, True, "mm")
         c.circle(640, t + 274, 50, fill=theme.AMBER_T)
         for k in range(18):
             c.arc(640, t + 274, 49, k * 20, k * 20 + 11, theme.AMBER, 3)
         c.glyph_text(640, t + 274, "?", 46, theme.AMBER_D, True)
-        c.wrapped(520, t + 346, "No gesture was seen, so this round doesn't count. Go again!", 14, theme.MUTED, 240, 19, align="c")
+        c.wrapped(520, t + 346, "Open the shutter or uncover the lens, then go again. This round doesn't count." if blocked
+                  else "No gesture was seen, so this round doesn't count. Go again!", 14, theme.MUTED, 240, 19, align="c")
     else:
         c.text(640, t + 204, "GET READY", 28, theme.INK, True, "mm")
         c.circle(640, t + 278, 52, fill=theme.PLAYER)
