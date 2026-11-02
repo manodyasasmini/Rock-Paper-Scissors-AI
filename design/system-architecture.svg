@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1260 585" width="1260" height="585" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
+  <title>Rock Paper Scissors AI: system architecture</title>
+  <defs>
+    <marker id="head" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1e2a5a"/>
+    </marker>
+  </defs>
+
+  <!-- arrows -->
+  <g stroke="#1e2a5a" stroke-width="3.5" fill="none" stroke-linecap="round">
+    <path d="M334,80 L474,80" marker-end="url(#head)"/>
+    <path d="M786,80 L926,80" marker-end="url(#head)"/>
+    <path d="M1080,134 L1080,186" marker-end="url(#head)"/>
+    <path d="M926,240 L786,240" marker-end="url(#head)"/>
+    <path d="M474,240 L334,240" marker-end="url(#head)"/>
+    <path d="M630,294 L630,371" marker-start="url(#head)" marker-end="url(#head)"/>
+    <path d="M334,425 L474,425" marker-start="url(#head)" marker-end="url(#head)"/>
+    <path d="M786,425 L926,425" marker-start="url(#head)" marker-end="url(#head)"/>
+  </g>
+
+  <!-- outside the program: white boxes -->
+  <g fill="#ffffff" stroke="#1e2a5a" stroke-width="3.5">
+    <rect x="30" y="30" width="300" height="100" rx="18"/>
+    <rect x="30" y="190" width="300" height="100" rx="18"/>
+    <rect x="30" y="375" width="300" height="100" rx="18"/>
+  </g>
+  <g text-anchor="middle" fill="#1e2a5a">
+    <text x="180" y="88" font-size="26" font-weight="700">Webcam</text>
+    <text x="180" y="248" font-size="26" font-weight="700">Display</text>
+    <text x="180" y="427" font-size="26" font-weight="700">Players &amp; board</text>
+  </g>
+  <g text-anchor="middle" fill="#5a6785" font-size="17">
+    <text x="180" y="116">Live picture of the player</text>
+    <text x="180" y="276">OpenCV + Pillow</text>
+    <text x="180" y="455">JSON file</text>
+  </g>
+
+  <!-- the program: dark boxes -->
+  <g fill="#1e2a5a">
+    <rect x="480" y="30" width="300" height="100" rx="18"/>
+    <rect x="930" y="30" width="300" height="100" rx="18"/>
+    <rect x="930" y="190" width="300" height="100" rx="18"/>
+    <rect x="480" y="190" width="300" height="100" rx="18"/>
+    <rect x="930" y="375" width="300" height="100" rx="18"/>
+  </g>
+  <!-- the AI -->
+  <rect x="480" y="375" width="300" height="100" rx="18" fill="#f43f5e"/>
+
+  <g text-anchor="middle" fill="#ffffff" font-size="26" font-weight="700">
+    <text x="630" y="88">OpenCV</text>
+    <text x="1080" y="88">MediaPipe Hands</text>
+    <text x="1080" y="248">Gesture classifier</text>
+    <text x="630" y="248">Game state machine</text>
+    <text x="630" y="427">Adaptive AI</text>
+    <text x="1080" y="427">Match report</text>
+  </g>
+  <g text-anchor="middle" fill="#cbd5ff" font-size="17">
+    <text x="630" y="116">Capture and mirror</text>
+    <text x="1080" y="116">21 hand landmarks</text>
+    <text x="1080" y="276">Rock / paper / scissors</text>
+    <text x="630" y="276">Ready, countdown, reveal</text>
+    <text x="1080" y="455">What it learned about you</text>
+  </g>
+  <text x="630" y="455" text-anchor="middle" fill="#ffe4ea" font-size="17">Four predictors</text>
+
+  <!-- caption -->
+  <text x="630" y="545" text-anchor="middle" fill="#1e2a5a" font-size="19">Camera frame → hand landmarks → move → game → AI reply (locked before the throw is read)</text>
+</svg>
