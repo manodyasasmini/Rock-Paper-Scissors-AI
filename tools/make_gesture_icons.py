@@ -22,6 +22,7 @@ HANDS = {
     "scissors": dict(box=(722, 735, 1160, 995), seeds=["tr", "br", "bl"], turn=90),
 }
 PREVIEW_WIDTH = 2000
+EPS_SCALE = 5  # the EPS is 1280 x 720, so this renders 6400 x 3600
 OUTLINE_MIN_CHANNEL = 215
 ICON_HEIGHT = 480
 ARM_FADE = 0.22
@@ -79,11 +80,22 @@ def make_icon(source, name, spec):
     return Image.fromarray(pixels, "RGBA")
 
 
+def open_artwork(path):
+    """Open a .jpg/.png, or render a vector .eps at EPS_SCALE times its size (needs Ghostscript)."""
+    art = Image.open(path)
+    if path.lower().endswith(".eps"):
+        try:
+            art.load(scale=EPS_SCALE)
+        except OSError as error:
+            sys.exit(f"Could not render the EPS ({error}). Install Ghostscript, or pass the .jpg instead.")
+    return art.convert("RGB")
+
+
 def main():
     source_path = sys.argv[1]
     out_dir = sys.argv[2] if len(sys.argv) > 2 else os.path.join("assets", "gestures")
     os.makedirs(out_dir, exist_ok=True)
-    source = Image.open(source_path).convert("RGB")
+    source = open_artwork(source_path)
     for name, spec in HANDS.items():
         icon = make_icon(source, name, spec)
         icon.save(os.path.join(out_dir, f"{name}.png"), optimize=True)
