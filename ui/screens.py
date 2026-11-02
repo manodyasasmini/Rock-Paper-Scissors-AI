@@ -18,8 +18,6 @@ from ui import canvas as canvas_module
 from ui.canvas import Canvas, Layout, aa_mask, draw_card, make_background
 from ui.gestures import gesture_icon
 
-CREDIT = "Created by SMS Abeyrathne · 235501H · BSc (Hons) Artificial Intelligence"
-
 # Where things sit in the design (1280 x 720)
 CARD_TOP, CARD_H = 70, 520                 # the two player cards and the middle card share this top and height
 MATCH_CAM = (44, CARD_TOP + 62, 408, 430)   # your camera picture
@@ -336,7 +334,10 @@ def _learn_panel(c, session):
     c.rect(x + 1, y + 1, w - 2, h - 2, fill=theme.AI_T, radius=13)
     evidence_colors = {"LOW": theme.AMBER_D, "MEDIUM": theme.PLAYER_D, "HIGH": theme.GREEN_D}
     c.text(x + 206, y + 20, f"EVIDENCE: {prediction.evidence}", 12, evidence_colors[prediction.evidence], True)
-    c.wrapped(x + 206, y + 44, session.explanation, 13.5, theme.INK2, 194, 17, max_lines=5)
+    for size, line_height, max_lines in ((13.5, 17, 5), (12.5, 16, 6), (11.5, 15, 6)):
+        if len(c.wrap_lines(session.explanation, size, 194)) <= max_lines:
+            break
+    c.wrapped(x + 206, y + 44, session.explanation, size, theme.INK2, 194, line_height, max_lines=max_lines)
     base, max_h = y + 110, 68
     chance_y = base - max_h / 3
     c.dashed_line(x + 8, chance_y, x + 166, chance_y, theme.FAINT, 1.5, 5, 4)
@@ -629,7 +630,6 @@ def _summary(session, L, now):
         width = max(26, c.tw(key, 13, True) + 16) + 10 + c.tw(label, 17, True)
         edge = _keycap(c, x + w / 2 - width / 2, 608, key)
         c.text(edge + 10, 608, label, 17, theme.WHITE if primary else theme.INK2, True)
-    c.text(640, 672, CREDIT, 13, theme.FAINT, False, "mm")
     return c
 
 

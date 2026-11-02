@@ -207,8 +207,8 @@ class Canvas:
             self.text(x, y, t, size, colour, bold)
             x += self.tw(t, size, bold)
 
-    def wrapped(self, x, y, text, size, fill, width, line_height, bold=False, align="l", max_lines=8):
-        """Word-wrapped text starting at (x, y) in a box `width` wide. Returns the number of lines."""
+    def wrap_lines(self, text, size, width, bold=False):
+        """Break `text` into lines no wider than `width` design units."""
         lines, line = [], ""
         for word in text.split():
             trial = f"{line} {word}".strip()
@@ -217,7 +217,14 @@ class Canvas:
             else:
                 lines.append(line)
                 line = word
-        lines = (lines + ([line] if line else []))[:max_lines]
+        return lines + ([line] if line else [])
+
+    def wrapped(self, x, y, text, size, fill, width, line_height, bold=False, align="l", max_lines=8):
+        """Word-wrapped text starting at (x, y) in a box `width` wide. Returns the number of lines."""
+        lines = self.wrap_lines(text, size, width, bold)
+        if len(lines) > max_lines:   # never stop mid-sentence without saying so
+            lines = lines[:max_lines]
+            lines[-1] = lines[-1].rstrip(" .,;") + "…"
         for i, content in enumerate(lines):
             if align == "c":
                 self.text(x + width / 2, y + i * line_height, content, size, fill, bold, "mm")
