@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Face-off colour lab</title>
+<style>
+:root{color-scheme:light;--page:#e9edf5;--text:#14213d;--muted:#5a6785;--line:#d3dbea}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;max-width:1700px;margin:0 auto;padding:18px 20px 40px;align-items:start}
+.left h1{margin:0 0 4px;font-size:24px}
+.left p{margin:0 0 12px;color:var(--muted);max-width:800px}
+.stage-wrap{position:relative;width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;box-shadow:0 8px 28px rgba(20,30,60,.22)}
+.panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 14px 16px;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}
+.panel h3{margin:14px 0 8px;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted)}
+.panel h3:first-child{margin-top:0}
+.sw{display:flex;flex-wrap:wrap;gap:7px}
+.sw button{width:34px;height:34px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #b9c3d8;cursor:pointer;padding:0}
+.sw button.on{box-shadow:0 0 0 3px var(--text)}
+.sw.sq button{border-radius:10px;width:46px;height:34px}
+.cp{display:flex;align-items:center;gap:8px;margin-top:8px;color:var(--muted);font-size:13px}
+.cp input{width:38px;height:28px;border:1px solid #b9c3d8;border-radius:8px;padding:0;background:#fff;cursor:pointer}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;padding:7px 4px;border-radius:10px;border:1px solid #c4cde0;background:#fff;color:var(--text);font:inherit;cursor:pointer}
+.seg button.on{background:var(--text);color:#fff;border-color:var(--text)}
+.names{margin:6px 0 0;font-size:13px;color:var(--muted)}
+.btn{margin-top:14px;width:100%;padding:10px;border-radius:10px;border:0;background:#2563eb;color:#fff;font:inherit;font-weight:600;cursor:pointer}
+.btn.ghost{background:#fff;color:var(--text);border:1px solid #c4cde0;margin-top:8px}
+dialog{width:min(520px,92vw);border:1px solid #c4cde0;border-radius:16px;padding:20px}
+dialog textarea{width:100%;min-height:170px;font:13px/1.5 ui-monospace,Consolas,monospace;border:1px solid #c4cde0;border-radius:10px;padding:10px}
+@media (max-width:1100px){.layout{grid-template-columns:1fr}.panel{position:static;max-height:none}}
+
+/* ---------------- the stage ---------------- */
+.stage{--p:#2563eb;--a:#f97316;--bg:#f4f6fb;--card:#fff;--ink:#14213d;--muted:#5a6785;--faint:#8e99b3;--line:#e1e6f2;--chip:#eef1f8;--track:#e3e8f4;--shadow:0 10px 32px rgba(20,33,61,.10);--tile:#172554;
+  --pT:color-mix(in srgb,var(--p) 15%,var(--card));--aT:color-mix(in srgb,var(--a) 15%,var(--card));--aip:linear-gradient(160deg,#374151,#111827);
+  position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;overflow:hidden;font-family:"Segoe UI",system-ui,sans-serif;color:var(--ink);
+  background:radial-gradient(circle at 10% 6%,color-mix(in srgb,var(--p) 14%,transparent),transparent 38%),radial-gradient(circle at 92% 94%,color-mix(in srgb,var(--a) 14%,transparent),transparent 40%),var(--bg)}
+.stage *{box-sizing:border-box}
+.card{position:absolute;top:24px;height:616px;border-radius:22px;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow)}
+.card.pl{left:28px;width:440px;border-top:6px solid var(--p)}
+.card.ai{left:812px;width:440px;border-top:6px solid var(--a)}
+.card.mid{left:488px;width:304px}
+.card.win{box-shadow:0 0 0 4px var(--ring),0 12px 40px color-mix(in srgb,var(--ring) 40%,transparent)}
+.nm{position:absolute;left:24px;top:18px;font-size:26px;font-weight:700;line-height:1.1}
+.pl .nm{color:var(--p)} .ai .nm{left:24px;font-size:22px;top:20px;color:var(--a)}
+.chip{position:absolute;right:16px;top:17px;display:flex;align-items:center;gap:7px;padding:6px 13px;border-radius:999px;font-size:14px;font-weight:600;white-space:nowrap}
+.pl .chip{background:var(--pT);color:var(--p)} .ai .chip{background:var(--chip);color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;background:currentColor}
+.cam{position:absolute;left:16px;top:62px;width:408px;height:382px;border-radius:16px;overflow:hidden;background:#222}
+.room{position:absolute;inset:0;background:radial-gradient(circle at 17% 38%,#e8dccd 0 8%,transparent 8.6%),linear-gradient(115deg,#a07c6c,#b0808a 55%,#a9a46c);filter:blur(1.2px)}
+.room::after{content:"";position:absolute;right:6%;top:18%;width:20%;height:62%;background:#76594b;opacity:.75;filter:blur(7px)}
+.cam svg{position:absolute;inset:0;width:100%;height:100%}
+.aip{position:absolute;left:16px;top:62px;width:408px;height:382px;border-radius:16px;overflow:hidden;background:var(--aip)}
+.aip img{position:absolute;top:4px;left:50%;height:374px;transform:translateX(-50%) rotate(180deg)}
+.tiles{position:absolute;left:16px;top:458px;width:408px;height:140px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.tile{position:relative;border-radius:14px;overflow:hidden;background:var(--tile);border:1px solid rgba(255,255,255,.1)}
+.tile img{position:absolute;left:50%;top:6px;height:128px;transform:translateX(-50%);opacity:.34}
+.tile.lit{border:3px solid var(--c)} .tile.lit img{opacity:1}
+.ribbon{position:absolute;top:-17px;padding:5px 26px;border-radius:999px;color:#fff;font-weight:800;font-size:13px;letter-spacing:2px;background:var(--ring);box-shadow:0 4px 12px rgba(0,0,0,.25)}
+.mid>*{position:absolute;left:0;width:100%;text-align:center}
+.lbl{top:22px;font-size:12px;font-weight:700;letter-spacing:3px;color:var(--faint)}
+.rn{top:44px;font-size:50px;font-weight:700;line-height:1}
+.rn small{font-size:24px;color:var(--faint)}
+.sc{position:absolute!important;top:116px;width:126px!important;height:88px;border-radius:16px;border:2px solid;padding-top:8px}
+.sc b{display:block;font-size:13px;letter-spacing:1px}
+.sc span{display:block;font-size:44px;font-weight:700;line-height:1.1;color:var(--ink)}
+.sc.y{left:20px!important;border-color:var(--p);background:var(--pT)} .sc.y b{color:var(--p)}
+.sc.o{left:158px!important;border-color:var(--a);background:var(--aT)} .sc.o b{color:var(--a)}
+.res{top:226px;font-size:36px;font-weight:800}
+.duel{position:absolute!important;top:284px;left:20px!important;width:264px!important;height:132px;display:flex;justify-content:space-between;align-items:center}
+.duel .tile{width:108px;height:132px}
+.duel .tile img{height:122px;top:2px;opacity:1}
+.duel .tile.ai img{transform:translateX(-50%) rotate(180deg)}
+.duel i{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-style:normal;font-size:14px;font-weight:700;color:var(--faint)}
+.why{top:436px;font-size:15px;font-weight:700;color:var(--ink)}
+.delta{top:464px;font-size:14px;font-weight:700}
+.pips{top:504px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.pips div{display:flex;gap:8px}
+.pip{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:700 11px "Segoe UI",sans-serif;color:#fff;border:2px solid var(--track);background:var(--card)}
+.pip.w{background:var(--p);border-color:var(--p)} .pip.l{background:var(--a);border-color:var(--a)} .pip.d{background:var(--faint);border-color:var(--faint)}
+.pip.now{border-color:var(--p);box-shadow:0 0 0 3px color-mix(in srgb,var(--p) 25%,transparent)}
+.streak{top:582px;font-size:14px;font-weight:700;color:var(--faint)}
+.streak b{color:var(--ink)}
+.hint{position:absolute;left:140px;top:656px;width:1000px;display:flex;gap:26px;justify-content:center;font-size:15px;color:var(--muted)}
+.kc{display:inline-block;min-width:26px;padding:2px 8px;border:1px solid var(--line);border-bottom-width:3px;border-radius:8px;background:var(--card);font-weight:700;color:var(--ink);font-size:13px;text-align:center}
+</style>
+</head>
+<body>
+<div class="layout">
+  <div class="left">
+    <h1>Face-off colour lab</h1>
+    <p>You on the left, the AI on the right, in one screen. Change the colours on the right and the screen updates straight away. Nothing here uses green or red, because those would suggest "good" and "bad". Wins and losses are shown in your colour and the AI's colour instead.</p>
+    <div class="stage-wrap" id="sw"><div class="stage" id="stage"></div></div>
+  </div>
+  <aside class="panel">
+    <h3>Round result to preview</h3>
+    <div class="seg" id="res"><button data-v="p" class="on">You win</button><button data-v="a">AI wins</button><button data-v="d">Draw</button></div>
+
+    <h3>Your colour</h3>
+    <div class="sw" id="pal-p"></div>
+    <label class="cp">Custom <input type="color" id="cu-p" value="#2563eb"></label>
+
+    <h3>AI colour</h3>
+    <div class="sw" id="pal-a"></div>
+    <label class="cp">Custom <input type="color" id="cu-a" value="#f97316"></label>
+
+    <h3>Behind the AI's hand</h3>
+    <div class="sw sq" id="pal-h"></div>
+    <div class="names" id="nm-h"></div>
+
+    <h3>Screen style</h3>
+    <div class="sw sq" id="pal-m"></div>
+    <div class="names" id="nm-m"></div>
+
+    <button class="btn" id="copy">Copy my settings</button>
+    <button class="btn ghost" id="reset">Reset</button>
+  </aside>
+</div>
+<dialog id="dlg"><h3 style="margin:0 0 8px">Your settings</h3><textarea id="out" readonly></textarea><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button class="seg-btn" id="cp" style="padding:8px 14px;border-radius:10px;border:0;background:#2563eb;color:#fff;cursor:pointer">Copy</button><button id="cl" style="padding:8px 14px;border-radius:10px;border:1px solid #c4cde0;background:#fff;cursor:pointer">Close</button></div></dialog>
+
+<script>
+const IMG={ROCK:"../assets/gestures/rock.png",PAPER:"../assets/gestures/paper.png",SCISSORS:"../assets/gestures/scissors.png"};
+/* colours with no built-in meaning (no green, red or amber) */
+const ACCENTS=[["Blue","#2563eb"],["Sky","#0ea5e9"],["Cyan","#06b6d4"],["Teal","#0d9488"],["Indigo","#4f46e5"],["Violet","#7c3aed"],["Pink","#ec4899"],["Coral","#fb7185"],["Orange","#f97316"],["Slate","#475569"]];
+const HANDS=[["Charcoal","linear-gradient(160deg,#374151,#111827)"],["Midnight","linear-gradient(160deg,#1e293b,#0b1220)"],["Deep teal","linear-gradient(160deg,#0f766e,#134e4a)"],["Deep blue","linear-gradient(160deg,#1e40af,#172554)"],["Plum","linear-gradient(160deg,#6b21a8,#3b0764)"],["Sand","linear-gradient(160deg,#f6e7c7,#ecd29b)"],["Sunny","linear-gradient(160deg,#fde047,#fbbf24)"],["Sky","linear-gradient(160deg,#bae6fd,#7dd3fc)"],["Cloud","linear-gradient(160deg,#f1f5f9,#cbd5e1)"],["AI colour","accent"]];
+const MODES=[["Soft white",{bg:"#f4f6fb",card:"#ffffff",ink:"#14213d",muted:"#5a6785",faint:"#8e99b3",line:"#e1e6f2",chip:"#eef1f8",track:"#e3e8f4",shadow:"0 10px 32px rgba(20,33,61,.10)",tile:"#172554"},"#f4f6fb"],
+ ["Cream",{bg:"#f8f1e3",card:"#fffaf0",ink:"#3a2a1c",muted:"#7d6a52",faint:"#a8957a",line:"#e6d8bb",chip:"#f1e6cc",track:"#eadfc5",shadow:"0 10px 28px rgba(90,60,20,.14)",tile:"#2e2433"},"#f8f1e3"],
+ ["Cool grey",{bg:"#e3e7ee",card:"#f6f8fb",ink:"#1f2937",muted:"#5b6575",faint:"#8a93a3",line:"#d3d9e3",chip:"#e6eaf1",track:"#d9dee8",shadow:"0 10px 28px rgba(31,41,55,.14)",tile:"#1f2937"},"#e3e7ee"],
+ ["Midnight",{bg:"#0b1020",card:"#141b33",ink:"#eef2ff",muted:"#9aa6d0",faint:"#6b78ad",line:"#2a3566",chip:"#1d2650",track:"#2a3566",shadow:"0 12px 40px rgba(0,0,0,.55)",tile:"#0a0f26"},"#0b1020"],
+ ["Charcoal",{bg:"#14161b",card:"#1e2128",ink:"#f1f3f7",muted:"#9aa2b2",faint:"#6b7385",line:"#2d323d",chip:"#272b35",track:"#2d323d",shadow:"0 10px 30px rgba(0,0,0,.45)",tile:"#101217"},"#14161b"]];
+const DEF={p:"#2563eb",a:"#f97316",h:0,m:0,r:"p"};
+let S; try{ S=Object.assign({},DEF,JSON.parse(localStorage.getItem("rps-colour-lab")||"{}")); }catch(e){ S=Object.assign({},DEF); }
+const save=()=>{ try{ localStorage.setItem("rps-colour-lab",JSON.stringify(S)); }catch(e){} };
+
+/* hand skeleton */
+const SK=[[285,262],[252,245],[228,222],[212,198],[201,176],[258,200],[252,168],[249,146],[247,126],[284,194],[284,158],[284,134],[284,112],[311,200],[316,168],[319,147],[321,128],[334,212],[345,187],[351,170],[356,154]];
+const CN=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+function skel(){ const pw=408,ph=382,k=pw/560*1.45,cx=pw/2,cy=ph*.56,P=SK.map(([x,y])=>[cx+(x-285)*k,cy+(y-190)*k]);
+  const ln=CN.map(([a,b])=>`<line x1="${P[a][0]}" y1="${P[a][1]}" x2="${P[b][0]}" y2="${P[b][1]}"/>`).join("");
+  return `<svg viewBox="0 0 ${pw} ${ph}"><g stroke="#fff" stroke-width="9" stroke-linecap="round" opacity=".92">${ln}</g><g stroke="var(--p)" stroke-width="3.6" stroke-linecap="round">${ln}</g>${P.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="5.4" fill="#fff" stroke="var(--p)" stroke-width="2.4"/>`).join("")}</svg>`; }
+
+const hint=(k,l)=>`<span><span class="kc">${k}</span> ${l}</span>`;
+const strip=(lit,c)=>`<div class="tiles" style="--c:${c}">${["ROCK","PAPER","SCISSORS"].map(m=>`<div class="tile ${lit===m?"lit":""}"><img src="${IMG[m]}" alt=""></div>`).join("")}</div>`;
+const CASES={p:{you:"PAPER",ai:"ROCK",res:"YOU WIN!",col:"var(--p)",why:"PAPER beats ROCK",delta:"+1 point for you",ys:4,as:4,last:"w"},
+             a:{you:"PAPER",ai:"SCISSORS",res:"AI WINS",col:"var(--a)",why:"SCISSORS beats PAPER",delta:"+1 point for the AI",ys:3,as:5,last:"l"},
+             d:{you:"PAPER",ai:"PAPER",res:"DRAW",col:"var(--muted)",why:"PAPER ties PAPER",delta:"No points this round",ys:3,as:4,last:"d"}};
+function render(){
+  const c=CASES[S.r], st=document.getElementById("stage"), m=MODES[S.m][1];
+  const h=HANDS[S.h], aip=h[1]==="accent" ? `linear-gradient(160deg,color-mix(in srgb,var(--a) 70%,#000),color-mix(in srgb,var(--a) 35%,#000))` : h[1];
+  const vars={"--p":S.p,"--a":S.a,"--bg":m.bg,"--card":m.card,"--ink":m.ink,"--muted":m.muted,"--faint":m.faint,"--line":m.line,"--chip":m.chip,"--track":m.track,"--shadow":m.shadow,"--tile":m.tile,"--aip":aip};
+  Object.entries(vars).forEach(([k,v])=>st.style.setProperty(k,v));
+  st.style.setProperty("--ring", S.r==="a" ? "var(--a)" : "var(--p)");
+  const prev=["w","l","d","l","w","w","l","d",c.last];
+  const pips=n=>{ let out=""; for(let i=n[0];i<n[1];i++){ const v=prev[i]; out+=`<span class="pip ${v||""} ${i===prev.length?"now":""}">${v?v.toUpperCase():""}</span>`; } return out; };
+  st.innerHTML=`
+  <div class="card pl ${S.r==="p"?"win":""}"><div class="nm">MANO</div><div class="chip"><span class="dot"></span>Final: PAPER</div>
+    <div class="cam"><div class="room"></div>${skel()}</div>${strip(c.you,"var(--p)")}${S.r==="p"?'<div class="ribbon" style="right:60px">WINNER</div>':""}</div>
+  <div class="card mid">
+    <div class="lbl">ROUND</div><div class="rn">9<small> / 15</small></div>
+    <div class="sc y"><b>YOU</b><span>${c.ys}</span></div><div class="sc o"><b>AI</b><span>${c.as}</span></div>
+    <div class="res" style="color:${c.col}">${c.res}</div>
+    <div class="duel"><div class="tile" style="--c:var(--p);border:3px solid var(--p)"><img src="${IMG[c.you]}" alt=""></div><i>vs</i><div class="tile ai" style="border:3px solid var(--a)"><img src="${IMG[c.ai]}" alt=""></div></div>
+    <div class="why">${c.why}</div><div class="delta" style="color:${c.col}">${c.delta}</div>
+    <div class="pips"><div>${pips([0,8])}</div><div>${pips([8,15])}</div></div>
+    <div class="streak">STREAK <b>${S.r==="p"?1:0}</b> · best 2</div>
+  </div>
+  <div class="card ai ${S.r==="a"?"win":""}"><div class="nm">ADAPTIVE AI</div><div class="chip">Challenge</div>
+    <div class="aip"><img src="${IMG[c.ai]}" alt=""></div>${strip(c.ai,"var(--a)")}${S.r==="a"?'<div class="ribbon" style="right:60px">WINNER</div>':""}</div>
+  <div class="hint">${hint("SPACE","Next round")}${hint("P","New player")}${hint("H","Learn mode")}${hint("Q","Quit")}</div>`;
+  // the AI's own tile strip uses the AI's accent; tiles inside the AI card read --c
+  document.getElementById("cu-p").value=S.p; document.getElementById("cu-a").value=S.a;
+  document.querySelectorAll("#res button").forEach(b=>b.classList.toggle("on",b.dataset.v===S.r));
+  document.querySelectorAll("#pal-p button").forEach((b,i)=>b.classList.toggle("on",ACCENTS[i][1]===S.p));
+  document.querySelectorAll("#pal-a button").forEach((b,i)=>b.classList.toggle("on",ACCENTS[i][1]===S.a));
+  document.querySelectorAll("#pal-h button").forEach((b,i)=>b.classList.toggle("on",i===S.h));
+  document.querySelectorAll("#pal-m button").forEach((b,i)=>b.classList.toggle("on",i===S.m));
+  document.getElementById("nm-h").textContent=HANDS[S.h][0]; document.getElementById("nm-m").textContent=MODES[S.m][0];
+  save();
+}
+const mk=(id,list,fn,bg)=>{ document.getElementById(id).innerHTML=list.map((x,i)=>`<button title="${x[0]}" data-i="${i}" style="background:${bg(x,i)}"></button>`).join(""); document.getElementById(id).onclick=e=>{ const b=e.target.closest("button"); if(b){ fn(+b.dataset.i); render(); } }; };
+mk("pal-p",ACCENTS,i=>S.p=ACCENTS[i][1],x=>x[1]);
+mk("pal-a",ACCENTS,i=>S.a=ACCENTS[i][1],x=>x[1]);
+mk("pal-h",HANDS,i=>S.h=i,(x,i)=>x[1]==="accent"?"linear-gradient(160deg,#888,#444)":x[1]);
+mk("pal-m",MODES,i=>S.m=i,x=>x[2]);
+document.getElementById("cu-p").oninput=e=>{ S.p=e.target.value; render(); };
+document.getElementById("cu-a").oninput=e=>{ S.a=e.target.value; render(); };
+document.getElementById("res").onclick=e=>{ const b=e.target.closest("button"); if(b){ S.r=b.dataset.v; render(); } };
+document.getElementById("reset").onclick=()=>{ S=Object.assign({},DEF); render(); };
+document.getElementById("copy").onclick=()=>{ document.getElementById("out").value=`My colour settings\nYour colour: ${S.p}\nAI colour: ${S.a}\nBehind the AI's hand: ${HANDS[S.h][0]}\nScreen style: ${MODES[S.m][0]}`; document.getElementById("dlg").showModal(); };
+document.getElementById("cl").onclick=()=>document.getElementById("dlg").close();
+document.getElementById("cp").onclick=()=>{ const o=document.getElementById("out"); o.select(); try{ document.execCommand("copy"); }catch(e){} };
+function fit(){ const w=document.getElementById("sw"); document.getElementById("stage").style.transform=`scale(${w.clientWidth/1280})`; }
+addEventListener("resize",fit);
+render(); fit();
+</script>
+</body>
+</html>
