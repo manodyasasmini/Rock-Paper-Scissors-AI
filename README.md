@@ -1,164 +1,153 @@
-# 🎮 Rock-Paper-Scissors AI Battle Arena
+# Rock Paper Scissors AI
 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.12-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-0.10.14-green.svg?logo=google&logoColor=white)](https://developers.google.com/mediapipe)
-[![OpenCV](https://img.shields.io/badge/OpenCV-Computer%20Vision-orange.svg?logo=opencv&logoColor=white)](https://opencv.org/)
-[![Pillow](https://img.shields.io/badge/Pillow-UI%20Rendering-yellow.svg)](https://python-pillow.org/)
+[![OpenCV](https://img.shields.io/badge/OpenCV-4.11-orange.svg?logo=opencv&logoColor=white)](https://opencv.org/)
+[![Pillow](https://img.shields.io/badge/Pillow-UI-yellow.svg)](https://python-pillow.org/)
 
-An interactive, real-time Computer Vision game that lets you play **Rock-Paper-Scissors** against an adaptive AI bot through your webcam. Powered by **MediaPipe Hands** landmark detection and an intelligent **Markov Chain** pattern prediction algorithm.
+Play **Rock Paper Scissors** against an AI with your bare hand and a webcam. The AI learns your habits as the match goes on, and at the end the game shows you what it found out about you.
 
----
+![The report card at the end of a match](demo/12-report.png)
 
-## 📸 Gameplay & Interface Previews
+## Why this project
+
+Simple Rock Paper Scissors bots either play at random or follow one fixed rule, so they are pure luck or easy to beat. When a bot does learn from the player, the player rarely sees what it learned. This game makes the learning visible, and honest: every guess is shown next to the one-in-three chance level.
+
+## How a visit works
+
+1. **Start screen:** the leaderboard shows who beat the AI most. Press `SPACE`.
+2. **Your name:** type up to 12 letters and press `ENTER`. Leave it empty to play as a guest, who is never saved. If someone already plays under that name, the game asks "Is this you?" (`Y` or `N`), so two visitors never share scores.
+3. **Camera check:** hold your hand up for two seconds until everything is ticked, then press `SPACE`.
+4. **The match:** 15 rounds. Press `SPACE` for each round, then show rock, paper or scissors on SHOOT! The AI locked its move before your throw was read.
+5. **Report card:** a title (Mastermind, Hard to read, Creature of habit or Open book), a gauge showing how readable you were, your throw mix, the habits it found, and your leaderboard rank. `R` shows every round and what the AI expected.
+
+## Screens
+
+| Start screen | Name | Is this you? |
+| :---: | :---: | :---: |
+| ![Start screen](demo/01-start.png) | ![Name](demo/02-name.png) | ![Is this you](demo/03-is-this-you.png) |
+
+| Camera check | Countdown | You win |
+| :---: | :---: | :---: |
+| ![Camera check](demo/04-camera-check.png) | ![Countdown](demo/06-countdown.png) | ![You win](demo/07-you-win.png) |
+
+| Learn mode | Missed round | Every round |
+| :---: | :---: | :---: |
+| ![Learn mode](demo/10-learn-mode.png) | ![Missed round](demo/11-missed.png) | ![Every round](demo/13-every-round.png) |
 
 The pictures use the plain "skeleton only" camera view and made-up leaderboard names. Run `python tools/make_screenshots.py` to redraw them.
 
-### 1. Getting in
-| Start screen with the leaderboard | Your name | Is this you? |
-| :---: | :---: | :---: |
-| ![Start screen](demo/01-start.png) | ![Name](demo/02-name.png) | ![Is this you](demo/03-is-this-you.png) |
-| *Who beat the AI most, then press SPACE* | *The only typing* | *Asked when a name is already taken* |
+## The AI
 
-### 2. The match
-| Camera check | Ready | Countdown |
-| :---: | :---: | :---: |
-| ![Camera check](demo/04-camera-check.png) | ![Ready](demo/05-ready.png) | ![Countdown](demo/06-countdown.png) |
-| *Hold a hand up until everything is ticked* | *Press SPACE for each round* | *The AI has already locked its move* |
+Four small predictors each guess your next move, and the one with the best recent record counts most:
 
-### 3. Results
-| You win | AI wins | Draw |
-| :---: | :---: | :---: |
-| ![You win](demo/07-you-win.png) | ![AI wins](demo/08-ai-wins.png) | ![Draw](demo/09-draw.png) |
+- **Frequency:** how often you throw each move.
+- **Last move:** what usually follows your previous throw.
+- **Last two moves:** what usually follows your last pair of throws.
+- **Win-stay / lose-shift:** how you react to winning, losing or drawing.
 
-| Learn mode | Missed round | Report card |
-| :---: | :---: | :---: |
-| ![Learn mode](demo/10-learn-mode.png) | ![Missed round](demo/11-missed.png) | ![Report card](demo/12-report.png) |
-| *What the AI expected, and why (press H)* | *No hand seen: the round does not count* | *A title, how readable you were, and the habits found* |
+Old observations fade (a half-life of about 13 rounds), so it keeps up when you change tactics. Estimates start near 33% and only move with real evidence, so two throws can't produce a "90%" prediction.
 
----
+The AI picks its move by expected score, so it leans towards the counter to what it expects but still mixes in surprises. It plays almost at random when nothing stands out, which also keeps it fair against a player who really does throw at random.
 
-## ✨ Features
+**Fair by design:** the AI locks its move when the countdown starts, before the camera reads your throw. During a match it shows no reasoning, because that would tell you which habit to break.
 
-- 🖐️ **Real-Time Hand Tracking**: Uses Google MediaPipe's 21 3D-landmark skeletal tracking pipeline to recognize Rock, Paper, and Scissors gestures instantly at 30+ FPS.
-- 👤 **Multi-Player Profiles & Persistent Memory (`players_data.json`)**:
-  - Enter your player name at startup or switch profiles on the fly with `[P]`.
-  - Saves individualized Markov Chain behavioral transition matrices, high scores, win streaks, and match stats per player across game sessions!
-- 🧠 **Adaptive AI (Markov Chain Predictor)**:
-  - Tracks player transition patterns between moves in real-time.
-  - Anticipates the user's next gesture based on past behavioral probability and counters it dynamically.
-  - Toggle between **Predictive AI** and **Random AI** on the fly.
-- 🎨 **3-Column Arena & Cyberpunk HUD**:
-  - Crisp TrueType typography rendered via PIL RGBA alpha blending.
-  - Dedicated center camera viewport with 100% natural aspect ratio and live skeletal tracking.
-  - Unobstructed side-by-side **Player** and **AI** action cards.
-  - Animated 360° circular radial countdown timer.
-  - Live scoreboard with Win Streaks and recent match outcome pills (`W` / `L` / `D`).
-- 🖥️ **Full-Screen Responsive**: Seamlessly adapts to full screen and standard window modes with the press of `[F]`.
+### Measured against scripted players
 
----
+`python -m ai.simulate` plays 400 games of 30 rounds against scripted players and compares the AI with the first version of this project:
 
-## 🏗️ System Architecture
+| Player | AI wins (net per round) | AI guesses right |
+| :--- | :---: | :---: |
+| Throws at random | +0.015 (fair) | 34% |
+| Favours rock (60%) | +0.237 | 51% |
+| Cycles R-P-S | +0.872 | 91% |
+| Repeats R-R-P | +0.800 | 87% |
+| Win-stay, lose-shift | +0.847 | 90% |
+| Counters the AI's last move | +0.866 | 92% |
+| Switches habit midway | +0.321 | 57% |
 
-```
-[ Webcam Input ] 
-       │
-       ▼
-[ OpenCV Frame Capture ] ──► [ RGB Conversion ]
-                                   │
-                                   ▼
-                       [ MediaPipe Hands Pipeline ]
-                                   │
-                   ┌───────────────┴───────────────┐
-                   ▼                               ▼
-       [ 21 3D Landmarks ]              [ Cyber Skeleton Overlay ]
-                   │
-                   ▼
-     [ Geometric Gesture Classifier ]
-       (Rock / Paper / Scissors)
-                   │
-                   ▼
-       [ Game State Machine ]
-    (LOGIN ➔ READY ➔ COUNTDOWN ➔ RESULT)
-                   │
-                   ├───────────────┐
-                   ▼               ▼
-        [ Markov Chain AI ]   [ Score & Streak Tracker ]
-                   │
-                   ▼
-   [ PIL + OpenCV HUD Renderer ] ──► [ Fullscreen Arena Display ]
-```
+A fair match is 0.000, and guessing by chance is right 33% of the time. These are scripted players, so real people will differ. The settings in `config.py` are meant to be re-tuned after play-tests.
 
----
-
-## 🕹️ How a visit works
-
-1. **Start screen:** the leaderboard shows who beat the AI most. Press `SPACE`.
-2. **Your name:** type a name (up to 12 letters) and press `ENTER`. Leave it empty to play as a guest, who is never saved. If someone already plays under that name, the game asks "Is this you?" (`Y` or `N`), so two visitors never share scores.
-3. **Camera check:** hold your hand up for two seconds until everything is ticked, then press `SPACE` to start the match.
-4. **The match:** 15 rounds. Show rock, paper or scissors on SHOOT! The AI has already locked its move.
-5. **Report card:** a title, how readable you were, the habits it found, and your leaderboard rank.
-
-## 🎛️ Controls
+## Controls
 
 | Key | Action |
 | :---: | :--- |
-| **`[SPACE]`** | Play, start a round, move on |
-| **`[ENTER]`** | Confirm your name |
-| **`[H]`** | Learn mode: show what the AI expected after each round |
-| **`[R]`** | On the report: see every round |
-| **`[N]` / `[P]`** | Next player (back to the start screen) |
-| **`[F]`** | Toggle Fullscreen / Windowed mode |
-| **`[Ctrl+A]`** | Admin settings: match length, default mode, hide the camera picture, idle time, clear the leaderboard, sound |
-| **`[Q]`** | Quit, but only while the admin panel (Ctrl+A) is open, so visitors cannot close the game |
+| `SPACE` | Play, start a round, move on |
+| `ENTER` | Confirm your name |
+| `H` | Learn mode: show what the AI expected after each round |
+| `R` | On the report: see every round |
+| `N` / `P` | Next player (back to the start screen) |
+| `F` | Toggle fullscreen |
+| `Ctrl+A` | Operator panel (below) |
+| `Q` | Quit, only while the operator panel is open, so visitors cannot close the game |
 
----: | :--- |
-| **`[SPACE]`** | Start round / trigger 3-second animated countdown |
-| **`[P]`** | Switch active Player Profile & load individual AI memory |
-| **`[F]`** | Toggle Fullscreen / Windowed mode |
-| **`[D]`** | Switch AI Mode (*Predictive* vs *Random*) |
-| **`[R]`** | Reset scoreboard & streaks |
-| **`[Q]`** | Quit, but only while the admin panel (Ctrl+A) is open, so visitors cannot close the game |
+### Operator panel (`Ctrl+A`)
 
----
+Press the number to change a setting. Changes are saved straight away in `settings.json`.
 
-## 🚀 Quickstart & Installation
+1. **Match length:** 10, 15, 20 or no limit.
+2. **Default mode:** Challenge or Learn.
+3. **Camera picture:** full, or "skeleton only", which hides faces completely and still draws the hand.
+4. **Return to start screen:** after 10, 20 or 30 seconds without a hand or key. A "Still there?" prompt appears first.
+5. **Leaderboard:** press twice to clear it.
+6. **Sound:** countdown ticks and short result jingles (Windows only).
 
-### 1. Clone the repository
+## Privacy
+
+The webcam picture is used only to find your hand and to draw it on screen. No video or image is recorded or saved. Saved files hold only player names, leaderboard scores and the AI's statistics about each player. Guests are never saved. If the screen faces a public walkway, switch on "skeleton only".
+
+## Install and run
+
+Tested on Windows with Python 3.12 and a webcam.
+
 ```bash
 git clone https://github.com/manodyasasmini/Rock-Paper-Scissors-AI.git
 cd Rock-Paper-Scissors-AI
-```
-
-### 2. Set up virtual environment
-```bash
 python -m venv venv
-# On Windows:
 venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
-```
-
-### 3. Install dependencies
-```bash
 pip install -r requirements.txt
+python main.py
 ```
 
-### 4. Launch the game
+The game opens fullscreen. If the camera is unplugged or used by another app, it says so and keeps retrying.
+
+On macOS or Linux it should run, but the interface looks for Segoe UI and Arial in `C:\Windows\Fonts`, and sound uses `winsound`, so text falls back to a basic font and the game is silent.
+
+## Tests
+
 ```bash
-python rps_game.py
+pip install -r requirements-dev.txt
+python -m pytest
 ```
 
----
+The tests need no camera: they use made-up hand landmarks and check the game rules, the AI, the screens at several sizes, the leaderboard, the operator settings and the sounds.
 
-## 🛠️ Tech Stack & Concepts
+## Project layout
 
-- **Language**: Python 3.10+
-- **Computer Vision**: OpenCV, Google MediaPipe
-- **Machine Learning / AI**: Discrete-time Markov Chains, Transition Probability Matrices
-- **Graphics & UI**: PIL (Pillow), Alpha Compositing, Bézier & Radial Arc geometry
+| Folder or file | What it holds |
+| :--- | :--- |
+| `main.py` | The camera loop and window |
+| `config.py` | Every tunable value in one place |
+| `vision/` | Camera and MediaPipe, and the rock / paper / scissors classifier |
+| `ai/` | The adaptive AI and the simulator |
+| `game/` | Game rules and states, the leaderboard, saved players, settings, sounds |
+| `ui/` | The screens, drawn with Pillow on a 1280 x 720 design scaled to the window |
+| `assets/gestures/` | The three hand pictures |
+| `tools/` | Scripts that make the icons, screenshots and poster pictures |
+| `design/` | Screen mockups, colour experiments and poster material |
+| `rps_game.py` | The first version of the game, kept as a backup |
 
----
+## Tech stack
 
-## 👤 Author
+- **Python 3.12:** game logic, AI and tests
+- **MediaPipe Hands:** 21-point hand landmark tracking
+- **OpenCV:** camera capture and the window
+- **NumPy:** the AI's decaying probability tables
+- **Pillow:** all text, panels and artwork
+- **JSON:** saved players and the leaderboard
 
-**SMS Abeyrathne** · 235501H · BSc (Hons) Artificial Intelligence
+## Credits
+
+The hand pictures are cut from stock artwork; see `assets/gestures/NOTICE.md`.
+
+Created by **SMS Abeyrathne** · 235501H · BSc (Hons) Artificial Intelligence
