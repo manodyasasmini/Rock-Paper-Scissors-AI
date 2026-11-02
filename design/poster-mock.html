@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rock Paper Scissors AI - poster mock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+<style>
+:root{color-scheme:dark;--page:#0a0e17;--card:#111827;--line:#1f2a40;--text:#e6eef8;--muted:#8a9bb5;--amber:#ffb020;--green:#00e39a;--navy:#1b2756;--gold:#f5c518}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:15px/1.55 "Segoe UI",system-ui,sans-serif}
+h1,h2,h3,p{margin:0}
+
+/* ---------- page around the poster ---------- */
+.intro{max-width:1500px;margin:0 auto;padding:32px 24px 12px}
+.intro h1{font-size:28px}
+.intro p{color:var(--muted);max-width:900px;margin-top:8px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:28px;max-width:1500px;margin:0 auto;padding:12px 24px 80px;align-items:start}
+.holder{position:relative;width:100%;border-radius:6px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.tools{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+button{font:inherit;cursor:pointer}
+.btn{background:#16213a;border:1px solid #2b3a5c;color:var(--text);border-radius:10px;padding:8px 12px}
+.btn.primary{background:#0a6f86;border-color:#12a6c4;font-weight:600}
+.btn:hover{filter:brightness(1.15)}
+.notes{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;padding-right:6px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:14px}
+.box h3{font-size:15px;margin-bottom:4px}
+.box p{color:var(--muted)}
+.box ul{margin:6px 0 0;padding-left:18px}.box li{margin:3px 0}
+.todo-key{display:inline-block;background:#fff4c2;color:#5a4400;border-radius:4px;padding:0 6px;font-size:13px}
+.badge{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--amber);color:#1a1200;font-weight:800;font-size:12px;margin-right:6px}
+.dec{display:flex;gap:6px;margin:8px 0}
+.dec button{flex:1;padding:6px;border-radius:9px;border:1px solid #2b3a5c;background:#131c30;color:var(--text);font-size:13px}
+.dec button.on[data-v=keep]{background:#0b4d3a;border-color:var(--green)}
+.dec button.on[data-v=change]{background:#5a4210;border-color:var(--amber)}
+.dec button.on[data-v=drop]{background:#561a24;border-color:#ff4160}
+textarea{width:100%;min-height:70px;resize:vertical;background:#0d1424;border:1px solid #2b3a5c;border-radius:10px;color:var(--text);padding:8px 10px;font:inherit;font-size:14px}
+textarea:focus{outline:2px solid #12a6c4;outline-offset:1px}
+dialog{width:min(760px,92vw);background:#0f1627;color:var(--text);border:1px solid #2b3a5c;border-radius:16px;padding:20px}
+dialog::backdrop{background:rgba(0,0,0,.65)}
+dialog textarea{min-height:320px;font:13px/1.5 ui-monospace,Consolas,monospace}
+dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;align-items:center}
+@media (max-width:1100px){.layout{grid-template-columns:1fr}.notes{position:static;max-height:none}}
+
+/* ---------- the poster: 1587 x 2245, the same shape as the FIT EXPO template ---------- */
+.poster{position:absolute;left:0;top:0;width:1587px;height:2245px;transform-origin:0 0;background:#fff;overflow:hidden;
+  font-family:Poppins,"Segoe UI",system-ui,sans-serif;color:#2c303b}
+.poster *{box-sizing:border-box}
+.net{position:absolute;left:0;top:408px;width:1587px;height:1540px;opacity:.9}
+.hdr{position:absolute;left:0;top:0;width:1587px;height:392px;background:linear-gradient(135deg,#25366b 0%,#1a2650 48%,#0e1632 100%)}
+.stripe{position:absolute;left:0;width:1587px;height:16px;background:linear-gradient(90deg,#868c99,#e6e9ee 50%,#868c99)}
+.ph{border:2px dashed rgba(255,255,255,.6);color:rgba(255,255,255,.8);display:grid;place-items:center;text-align:center;font-size:15px;font-weight:600;letter-spacing:1px;border-radius:14px}
+.crest{position:absolute;left:104px;top:46px;width:116px;height:136px;border-radius:50%}
+.gline{position:absolute;left:246px;top:48px;width:4px;height:130px;background:var(--gold)}
+.dept{position:absolute;left:272px;top:50px;color:#fff;font-size:29px;line-height:38px;letter-spacing:5.2px}
+.dept b{display:block;font-weight:700}
+.dept span{display:block;font-weight:400}
+.anniv{position:absolute;left:1262px;top:40px;width:246px;height:170px}
+.ptitle{position:absolute;left:104px;top:208px;color:#fff;font-weight:800;font-size:70px;line-height:1.1;white-space:nowrap}
+.psub{position:absolute;left:106px;top:296px;color:var(--gold);font-weight:700;font-size:39px;letter-spacing:1px}
+.pline{position:absolute;left:98px;top:352px;width:948px;height:4px;background:linear-gradient(90deg,#c7cbd3,#9aa0ac)}
+.expo{position:absolute;right:80px;top:214px;text-align:right;color:#fff;font-weight:800;font-size:76px;line-height:1.02;letter-spacing:1px}
+.expo em{display:block;font-style:normal;color:var(--gold);font-size:76px}
+
+.col{position:absolute;top:448px;width:690px}
+.col.l{left:75px}.col.r{left:825px}
+.sec{margin-bottom:20px}
+.sec h2{display:inline-block;background:var(--navy);color:#fff;font-weight:700;font-size:26px;line-height:1;padding:11px 18px;border-radius:11px;letter-spacing:.3px;margin-bottom:12px}
+.sec p,.sec li{font-size:19px;line-height:1.55;text-align:justify;padding-left:8px}
+.sec p+p{margin-top:8px}
+.sec ul{margin:0;padding:0 0 0 28px}
+.sec li{padding-left:0;margin-bottom:7px}
+.sec li::marker{color:var(--navy)}
+.tech ul{list-style:none;padding-left:8px}
+.tech li{margin-bottom:5px;text-align:left}
+.tech li::before{content:"\2022\00a0";}
+.todo-text{background:#fff1b8;border-radius:5px;padding:0 6px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.shots{display:grid;grid-template-columns:1fr 1fr;gap:16px 18px;padding-left:0}
+.shots figure{margin:0}
+.shots img{display:block;width:100%;border-radius:10px;border:2px solid #1b2756;background:#0c101a}
+.shots figcaption{font-size:15.5px;line-height:1.3;color:#3a4050;margin-top:6px;text-align:left}
+.flow{display:flex;gap:8px;align-items:stretch;margin-top:16px;padding-left:0}
+.flow div{flex:1;background:#eef2fa;border:2px solid #1b2756;border-radius:12px;padding:10px 8px;text-align:center;font-weight:700;font-size:15px;line-height:1.25;color:#1b2756}
+.flow div small{display:block;font-weight:500;font-size:12.5px;color:#4a5266;margin-top:2px}
+.flow i{align-self:center;font-style:normal;font-weight:800;color:#1b2756;font-size:20px}
+.arch{position:relative;height:280px;margin-left:8px}
+.arch .b{position:absolute;width:196px;height:64px;border:2.5px solid #2c303b;border-radius:10px;background:#fff;display:grid;place-items:center;text-align:center;font-weight:700;font-size:15.5px;line-height:1.2;padding:4px 6px}
+.arch .b.d{border-style:dashed}
+.arch .b small{display:block;font-weight:500;font-size:12.5px;color:#505768}
+.arch svg{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible}
+.arch-cap{font-size:15px;color:#3a4050;margin:6px 0 0 8px;text-align:left}
+
+.ftr{position:absolute;left:0;top:1961px;width:1587px;height:284px;background:linear-gradient(135deg,#1e2b5c,#0f1733)}
+.team{position:absolute;left:315px;width:670px;top:62px;text-align:center;color:var(--gold);font-weight:800;font-size:38px;letter-spacing:2px}
+.members{position:absolute;left:150px;width:1000px;top:130px;display:flex;justify-content:space-between;padding:0 10px}
+.members div{width:176px;text-align:center;color:#fff;font-weight:700;font-size:18px;letter-spacing:2.3px;line-height:1.5}
+.uline{position:absolute;left:531px;top:204px;width:238px;height:3px;background:var(--gold)}
+.qr{position:absolute;left:1301px;top:30px;width:254px;height:226px;border-radius:22px;background:#c9cfdc;color:#161a24;display:grid;place-items:center;text-align:center;font-weight:800;font-size:23px;letter-spacing:3px;line-height:1.5;padding:20px}
+.qr small{display:block;font-weight:500;font-size:13px;letter-spacing:.5px;margin-top:8px;color:#3a4050}
+.todo-dark{outline:2px dashed rgba(245,197,24,.75);outline-offset:6px;border-radius:4px}
+.mk{position:absolute;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:#ffb020;color:#1a1200;font:800 24px Poppins,"Segoe UI",sans-serif;box-shadow:0 0 0 4px rgba(255,255,255,.9),0 3px 12px rgba(0,0,0,.45);z-index:20}
+body.nomarks .mk{display:none}
+</style>
+</head>
+<body>
+
+<header class="intro">
+  <h1>Poster mock: FIT EXPO 2026</h1>
+  <p>Drawn in the same layout as the FIT EXPO template you showed me: header, two columns of sections, then the team footer. The wording comes from what the game actually does. <span class="todo-key">Yellow</span> text and dashed outlines are things only you can fill in. Use the numbers on the poster and the notes on the right to tell me what to change.</p>
+</header>
+
+<div class="layout">
+  <div>
+    <div class="tools">
+      <button class="btn" id="zoom">Zoom: fit width</button>
+      <button class="btn" id="marks">Hide numbers</button>
+      <span style="color:var(--muted);font-size:13px">The poster is 1587 × 2245, the same shape as the template.</span>
+    </div>
+    <div class="holder" id="holder">
+      <div class="poster" id="poster">
+        <svg class="net" id="net" viewBox="0 0 1587 1540"></svg>
+
+        <div class="hdr" data-mk="1" data-mx="60" data-my="236">
+          <div class="crest ph">UNIVERSITY<br>CREST<br><span style="font-weight:400;font-size:12px">add logo</span></div>
+          <div class="gline"></div>
+          <div class="dept"><b>DEPARTMENT OF COMPUTATIONAL MATHEMATICS</b><span>FACULTY OF INFORMATION TECHNOLOGY</span><span>UNIVERSITY OF MORATUWA</span></div>
+          <div class="anniv ph">fit 25th ANNIVERSARY<br><span style="font-weight:400;font-size:12px">add logo</span></div>
+          <div class="ptitle">ROCK PAPER SCISSORS AI</div>
+          <div class="psub">AN AI THAT LEARNS YOUR HABITS</div>
+          <div class="pline"></div>
+          <div class="expo">FIT EXPO<em>2026</em></div>
+        </div>
+        <div class="stripe" style="top:392px"></div>
+
+        <!-- ================= left column ================= -->
+        <div class="col l" id="colL">
+          <section class="sec" data-mk="2">
+            <h2>PROJECT OVERVIEW</h2>
+            <p>Rock Paper Scissors AI is a real-time computer vision game. You play with your bare hand in front of a webcam against an AI that learns your habits as the match goes on. After 15 rounds it shows what it found out about you, and how much better than chance it could predict your throws.</p>
+          </section>
+          <section class="sec" data-mk="3">
+            <h2>PROBLEM STATEMENT</h2>
+            <p>Simple Rock Paper Scissors bots play at random or follow one fixed rule, so they are either pure luck or easy to beat. When an AI does learn from the player, the player rarely sees what it learned, and camera games often feel like a black box that is hard to trust.</p>
+          </section>
+          <section class="sec" data-mk="4">
+            <h2>PROPOSED SOLUTION</h2>
+            <p>A webcam game where MediaPipe tracks 21 points on the hand and a geometric classifier reads rock, paper or scissors. Four small predictors learn the player's habits, the AI plays the counter to what it expects, and a summary at the end explains what it noticed.</p>
+          </section>
+          <section class="sec" data-mk="5" style="margin-top:34px">
+            <h2>DEMO / KEY SCREENS / WORKFLOW</h2>
+            <div class="shots">
+              <figure><img src="poster-assets/arena-ready.png" alt="Ready screen"><figcaption><b>Ready:</b> live camera with the hand skeleton, and the three move tiles.</figcaption></figure>
+              <figure><img src="poster-assets/result.png" alt="Result screen"><figcaption><b>Reveal:</b> the AI's hand against yours. Its thinking stays hidden during play.</figcaption></figure>
+              <figure><img src="poster-assets/learn-mode.png" alt="Learn mode"><figcaption><b>Learn mode:</b> what the AI expected, with the one-in-three chance line.</figcaption></figure>
+              <figure><img src="poster-assets/summary.png" alt="Summary screen"><figcaption><b>Summary:</b> how well the AI read you, and the habits it found.</figcaption></figure>
+            </div>
+            <div class="flow">
+              <div>SHOW HAND<small>camera sees you</small></div><i>›</i>
+              <div>COUNTDOWN<small>AI locks its move</small></div><i>›</i>
+              <div>THROW<small>gesture is read</small></div><i>›</i>
+              <div>REVEAL<small>winner shown</small></div><i>›</i>
+              <div>SUMMARY<small>what it learned</small></div>
+            </div>
+            <p class="todo-text" style="display:inline-block;margin-top:10px;padding-left:6px;font-size:15px">Replace these four pictures with real screenshots of the finished game.</p>
+          </section>
+        </div>
+
+        <!-- ================= right column ================= -->
+        <div class="col r" id="colR">
+          <section class="sec" data-mk="6">
+            <h2>INNOVATIVE &amp; UNIQUE FEATURES</h2>
+            <ul>
+              <li><b>Four predictors in one AI:</b> how often you throw each move, what follows your last one or two moves, and how you react to a win or loss. The best performer counts most.</li>
+              <li><b>Fair by design:</b> the AI locks its move before your throw is read.</li>
+              <li><b>Forgets old habits,</b> so it keeps up when you change tactics.</li>
+              <li><b>Honest numbers:</b> every guess is shown beside the one-in-three chance level.</li>
+              <li><b>Two modes:</b> Challenge hides the AI's thinking, Learn shows it after every round.</li>
+              <li><b>Private:</b> no video is stored, and guests are never saved.</li>
+            </ul>
+          </section>
+          <section class="sec" data-mk="7">
+            <h2>SYSTEM ARCHITECTURE</h2>
+            <div class="arch">
+              <svg viewBox="0 0 690 280">
+                <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2c303b"/></marker></defs>
+                <g stroke="#2c303b" stroke-width="2.2" fill="none" marker-end="url(#ar)">
+                  <path d="M196,32 L246,32"/><path d="M442,32 L492,32"/>
+                  <path d="M590,64 L590,106"/><path d="M492,138 L442,138"/>
+                  <path d="M246,138 L196,138"/>
+                </g>
+                <g stroke="#2c303b" stroke-width="2.2" fill="none" marker-end="url(#ar)" marker-start="url(#ar)">
+                  <path d="M344,170 L344,212"/><path d="M246,244 L196,244"/><path d="M442,244 L492,244"/>
+                </g>
+              </svg>
+              <div class="b" style="left:0;top:0">Webcam</div>
+              <div class="b d" style="left:246px;top:0">OpenCV<small>capture and mirror</small></div>
+              <div class="b d" style="left:492px;top:0">MediaPipe Hands<small>21 landmarks</small></div>
+              <div class="b d" style="left:492px;top:106px">Gesture classifier<small>rock / paper / scissors</small></div>
+              <div class="b d" style="left:246px;top:106px">Game state machine<small>ready, countdown, reveal</small></div>
+              <div class="b" style="left:0;top:106px">Display<small>OpenCV + Pillow</small></div>
+              <div class="b d" style="left:246px;top:212px">Adaptive AI<small>four predictors</small></div>
+              <div class="b d" style="left:492px;top:212px">Match summary<small>what it learned</small></div>
+              <div class="b" style="left:0;top:212px">Player profiles<small>JSON file</small></div>
+            </div>
+            <p class="arch-cap">Camera frame → hand landmarks → move → game → AI reply (locked before the throw is read).</p>
+          </section>
+          <section class="sec tech" data-mk="8">
+            <h2>TECHNOLOGIES USED</h2>
+            <ul>
+              <li><b>Python 3.12</b> - game logic, AI engine and tests</li>
+              <li><b>MediaPipe Hands</b> - 21-point hand landmark tracking</li>
+              <li><b>OpenCV</b> - camera capture, window and skeleton drawing</li>
+              <li><b>NumPy</b> - the AI's decaying probability tables</li>
+              <li><b>Pillow</b> - text, panels and the gesture artwork</li>
+              <li><b>JSON</b> - saved player profiles</li>
+                          </ul>
+          </section>
+          <section class="sec" data-mk="9">
+            <h2>PRACTICAL IMPACT, RESULTS &amp; NEXT STEPS</h2>
+            <p><b>Impact:</b> in about two minutes visitors see how an AI learns from behaviour, and why being unpredictable beats it.</p>
+            <p><b>Results (simulation, 400 games of 30 rounds):</b> about fair against a random player, and the AI wins 84-91% of rounds against players with a pattern (R-R-P, win-stay/lose-shift, counter-the-AI).</p>
+            <p><b>Expo trial:</b> <span class="todo-text">add results: number of players, average % of throws the AI predicted</span></p>
+            <p><b>Next steps:</b> start screen and leaderboard, a skeleton-only privacy view, and tuning the AI on real players.</p>
+          </section>
+        </div>
+
+        <div class="stripe" style="top:1945px"></div>
+        <div class="ftr" data-mk="10" data-mx="60" data-my="2060">
+          <div class="team todo-dark">TEAM NAME</div>
+          <div class="members">
+            <div class="todo-dark">MEMBER NAME<br>MEMBER INDEX</div><div class="todo-dark">MEMBER NAME<br>MEMBER INDEX</div><div class="todo-dark">MEMBER NAME<br>MEMBER INDEX</div><div class="todo-dark">MEMBER NAME<br>MEMBER INDEX</div><div class="todo-dark">MEMBER NAME<br>MEMBER INDEX</div>
+          </div>
+          <div class="uline"></div>
+          <div class="qr todo-dark"><div>ADD YOUR QR HERE<small>suggestion: the GitHub repository</small></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <aside class="notes" id="notes">
+    <div class="box">
+      <h3>Before you print</h3>
+      <p>Things only you can supply (shown <span class="todo-key">yellow</span> or dashed on the poster):</p>
+      <ul>
+        <li>University crest and the FIT 25th anniversary logo (the template has them)</li>
+        <li>Team name, member names and index numbers</li>
+        <li>A QR code (the GitHub repository is a good target)</li>
+        <li>Real screenshots of the finished game</li>
+        <li>Results from the expo trial</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>Colours and fonts</h3>
+      <p>Navy and gold from the template. The font is Poppins, loaded from Google Fonts, so it shows only when you're online. Offline it falls back to a similar sans-serif.</p>
+    </div>
+    <div class="tools"><button class="btn primary" id="copyAll">Copy all notes</button><button class="btn" id="clearAll">Clear</button></div>
+    <div id="sections"></div>
+  </aside>
+</div>
+
+<dialog id="dlg">
+  <h3 style="margin-bottom:6px">Your notes</h3>
+  <p style="color:var(--muted);margin-bottom:12px">Paste this into the chat. If the Copy button doesn't work, click inside the box and press Ctrl+A then Ctrl+C.</p>
+  <textarea id="out" readonly></textarea>
+  <div class="row"><span id="copied" style="color:var(--green)"></span><button class="btn" id="close">Close</button><button class="btn primary" id="copy">Copy</button></div>
+</dialog>
+
+<script>
+/* ---- the faint network lines behind the body, like the template ---- */
+(function(){
+  let s = 7; const rnd = () => (s = (s*1664525+1013904223)>>>0) / 4294967296;
+  const pts = Array.from({length:34},()=>[rnd()*1587, rnd()*1540]);
+  let g = "";
+  pts.forEach((p,i)=>{
+    pts.map((q,j)=>[j,Math.hypot(p[0]-q[0],p[1]-q[1])]).filter(x=>x[0]!==i).sort((a,b)=>a[1]-b[1]).slice(0,2)
+      .forEach(([j])=>{ g += `<line x1="${p[0]}" y1="${p[1]}" x2="${pts[j][0]}" y2="${pts[j][1]}" stroke="#d7e3f2" stroke-width="2"/>`; });
+    g += `<circle cx="${p[0]}" cy="${p[1]}" r="6" fill="#e6eef8"/>`;
+  });
+  document.getElementById("net").innerHTML = g;
+})();
+
+/* ---- numbers on the poster ---- */
+const poster = document.getElementById("poster");
+const SECTIONS = [
+  [1,"Header","Title, subtitle, department lines and FIT EXPO 2026.","Is the title right? Do you want a different subtitle?"],
+  [2,"Project overview","What the project is, in 3 or 4 sentences.","Too long or too short? Anything to add?"],
+  [3,"Problem statement","The gap this project tries to fill.","Is this how you'd describe the problem?"],
+  [4,"Proposed solution","How the project answers it.","Is the technology described correctly for your audience?"],
+  [5,"Demo / key screens / workflow","Four pictures and the five-step flow.","Which screens do you want here? (They will be replaced with real screenshots.)"],
+  [6,"Innovative & unique features","The things that make it different.","Which of these would you drop or add?"],
+  [7,"System architecture","The block diagram, same style as the template.","Is the diagram clear? Do you want more or less detail?"],
+  [8,"Technologies used","What it is built with.","Anything missing from your tech stack?"],
+  [9,"Impact, results & next steps","Simulation results now, expo results later.","Do you want to show the simulation numbers at all?"],
+  [10,"Team and QR","Team name, five members, QR code.","How many members? What should the QR point to?"]
+];
+function placeMarks(){
+  poster.querySelectorAll(".mk").forEach(m=>m.remove());
+  poster.querySelectorAll("[data-mk]").forEach(el=>{
+    let x, y;
+    if(el.dataset.mx){ x=+el.dataset.mx; y=+el.dataset.my; }
+    else { const col=el.parentElement; const h=el.querySelector("h2"); x = col.offsetLeft-30; y = col.offsetTop+el.offsetTop+h.offsetHeight/2; }
+    const m=document.createElement("div"); m.className="mk"; m.textContent=el.dataset.mk; m.style.left=(x-22)+"px"; m.style.top=(y-22)+"px"; poster.appendChild(m);
+  });
+}
+
+/* ---- scaling ---- */
+const holder = document.getElementById("holder"); let fitWidth = true;
+function fit(){
+  const w = fitWidth ? holder.parentElement.clientWidth : 1587;
+  const s = w/1587; poster.style.transform = `scale(${s})`; holder.style.width = w+"px"; holder.style.height = (2245*s)+"px";
+}
+window.addEventListener("resize",fit);
+document.getElementById("zoom").onclick = e=>{ fitWidth=!fitWidth; e.target.textContent = fitWidth ? "Zoom: fit width" : "Zoom: actual size"; holder.parentElement.style.overflowX = fitWidth ? "visible":"auto"; fit(); };
+document.getElementById("marks").onclick = e=>{ document.body.classList.toggle("nomarks"); e.target.textContent = document.body.classList.contains("nomarks") ? "Show numbers" : "Hide numbers"; };
+
+/* ---- notes (saved in this browser) ---- */
+const KEY="rps-poster-notes-v1";
+let saved={}; try{ saved=JSON.parse(localStorage.getItem(KEY)||"{}"); }catch(e){}
+const persist=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(saved)); }catch(e){} };
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function buildNotes(){
+  document.getElementById("sections").innerHTML = SECTIONS.map(([n,t,what,q])=>`
+    <div class="box" data-n="${n}"><h3><span class="badge">${n}</span>${esc(t)}</h3><p>${esc(what)}</p><p style="color:#c9d6ea;margin-top:4px">${esc(q)}</p>
+    <div class="dec">${[["keep","Keep"],["change","Change"],["drop","Drop"]].map(([v,l])=>`<button data-v="${v}">${l}</button>`).join("")}</div>
+    <textarea placeholder="What should change?"></textarea></div>`).join("");
+  document.querySelectorAll("#sections .box").forEach(b=>{
+    const n=b.dataset.n, d=saved[n]||{};
+    b.querySelector("textarea").value=d.note||"";
+    b.querySelectorAll(".dec button").forEach(x=>x.classList.toggle("on",x.dataset.v===d.v));
+  });
+}
+document.getElementById("sections").addEventListener("click",e=>{
+  const b=e.target.closest(".dec button"); if(!b) return;
+  const n=b.closest(".box").dataset.n, d=saved[n]=saved[n]||{}; d.v = d.v===b.dataset.v ? "" : b.dataset.v;
+  b.parentElement.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.v===d.v)); persist();
+});
+document.getElementById("sections").addEventListener("input",e=>{
+  const t=e.target.closest("textarea"); if(!t) return; const n=t.closest(".box").dataset.n; (saved[n]=saved[n]||{}).note=t.value; persist();
+});
+function notesText(){
+  const L={keep:"KEEP",change:"CHANGE",drop:"DROP"}; const out=["My notes on the poster mock",""]; let any=false;
+  SECTIONS.forEach(([n,t])=>{ const d=saved[n]||{}, note=(d.note||"").trim(); if(!d.v&&!note) return; any=true;
+    out.push(`Poster ${n} · ${t}${d.v?" — "+L[d.v]:""}`); if(note) out.push("  "+note.replace(/\n/g,"\n  ")); out.push(""); });
+  if(!any) out.push("(No choices or comments yet.)"); return out.join("\n");
+}
+document.getElementById("copyAll").onclick=()=>{ document.getElementById("out").value=notesText(); document.getElementById("copied").textContent=""; document.getElementById("dlg").showModal(); };
+document.getElementById("clearAll").onclick=()=>{ if(confirm("Clear every choice and comment?")){ saved={}; persist(); buildNotes(); } };
+document.getElementById("close").onclick=()=>document.getElementById("dlg").close();
+document.getElementById("copy").onclick=async()=>{ const o=document.getElementById("out"), m=document.getElementById("copied");
+  try{ await navigator.clipboard.writeText(o.value); m.textContent="Copied. Paste it into the chat."; }catch(e){ o.select(); m.textContent=document.execCommand&&document.execCommand("copy")?"Copied. Paste it into the chat.":"Press Ctrl+C to copy."; } };
+
+buildNotes();
+fit();
+(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(placeMarks);
+setTimeout(placeMarks,400);
+</script>
+</body>
+</html>
