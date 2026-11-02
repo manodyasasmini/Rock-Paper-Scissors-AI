@@ -10,8 +10,8 @@ from PIL import Image
 
 import config
 from ai.engine import CHOICES
-from game.session import (STATE_CAMERA_CHECK, STATE_COUNTDOWN, STATE_IDLE, STATE_NAME_INPUT, STATE_REPLAY,
-                          STATE_SHOW_RESULT, STATE_START, STATE_SUMMARY)
+from game.session import (STATE_CAMERA_CHECK, STATE_COUNTDOWN, STATE_IDLE, STATE_NAME_CONFIRM, STATE_NAME_INPUT,
+                          STATE_REPLAY, STATE_SHOW_RESULT, STATE_START, STATE_SUMMARY)
 from game.summary import TITLES, title_index
 from ui import theme
 from ui import canvas as canvas_module
@@ -264,6 +264,8 @@ def _name(session, L, now):
     c.spaced(640, 64, "STEP 1 OF 2", 13, theme.FAINT)
     c.text(640, 128, "What's your name?", 46, theme.INK, True, "mm")
     c.text(640, 180, "It goes on the leaderboard if you beat the AI.", 19, theme.MUTED, False, "mm")
+    if session.name_notice:
+        c.text(640, 212, session.name_notice, 16, theme.AMBER_D, True, "mm")
     cursor = "|" if int(now * 2) % 2 == 0 else " "
     if session.input_text:
         c.runs(640, 292, [(session.input_text, theme.INK), (cursor, theme.PLAYER)], 56)
@@ -278,6 +280,36 @@ def _name(session, L, now):
     edge = _keycap(c, x, 465, "ENTER")
     c.text(edge + 10, 465, "Continue", 17, theme.WHITE, True)
     _hints(c, [("ESC", "Back")], 650 + 22)
+    return c
+
+
+def _build_confirm(c):
+    draw_card(c, 340, 170, 600, 330)
+
+
+def _confirm(session, L, now):
+    """Someone already plays under this name: is it the visitor?"""
+    c = _begin(L, "confirm", _build_confirm)
+    info = session.pending_info
+    c.spaced(640, 64, "STEP 1 OF 2", 13, theme.FAINT)
+    c.text(640, 118, "Is this you?", 46, theme.INK, True, "mm")
+    c.text(640, 252, (session.pending_name or "").upper(), 56, theme.PLAYER, True, "mm")
+    lines = []
+    if info.get("best"):
+        lines.append(f"Best match: {info['best']}")
+    if info.get("last"):
+        lines.append(f"Last played: {info['last']}")
+    for i, line in enumerate(lines or ["Played before"]):
+        c.text(640, 320 + i * 30, line, 20, theme.INK2, False, "mm")
+    c.wrapped(380, 396, "If it isn't you, choose a different name so you keep your own scores and the AI doesn't mix you up.",
+              15, theme.MUTED, 520, 21, align="c")
+    c.rect(340, 540, 290, 60, fill=theme.PLAYER, radius=16)
+    edge = _keycap(c, 340 + 145 - (max(26, c.tw("Y", 13, True) + 16) + 10 + c.tw("Yes, that's me", 18, True)) / 2, 570, "Y")
+    c.text(edge + 10, 570, "Yes, that's me", 18, theme.WHITE, True)
+    c.rect(650, 540, 290, 60, fill=theme.KEY_LINE, radius=16)
+    c.rect(652, 542, 286, 56, fill=theme.CARD, radius=14)
+    edge = _keycap(c, 650 + 145 - (max(26, c.tw("N", 13, True) + 16) + 10 + c.tw("No, another name", 18, True)) / 2, 570, "N")
+    c.text(edge + 10, 570, "No, another name", 18, theme.INK2, True)
     return c
 
 
@@ -537,13 +569,14 @@ def _middle(c, session, now, valid):
         c.text(640, t + 496, "No streak yet", 14, theme.FAINT, True, "mm")
 
     if state == STATE_COUNTDOWN:
-        hints = [("Q", "Quit")]
+        hints = []
     elif state == STATE_SHOW_RESULT:
         after = "See your report" if session.match_complete else ("Go again" if not valid else "Next round")
-        hints = [("SPACE", after), ("P", "New player"), ("H", "Hide thinking" if session.learn_mode else "Learn mode"), ("Q", "Quit")]
+        hints = [("SPACE", after), ("P", "New player"), ("H", "Hide thinking" if session.learn_mode else "Learn mode")]
     else:
-        hints = [("SPACE", "Start round"), ("P", "New player"), ("H", "Learn mode"), ("Q", "Quit")]
-    _hints(c, hints)
+        hints = [("SPACE", "Start round"), ("P", "New player"), ("H", "Learn mode")]
+    if hints:
+        _hints(c, hints)
 
 
 # ---------------------------------------------------------------- 5. report, every round
@@ -721,9 +754,10 @@ def _admin_overlay(c, session):
         ("Camera picture", "Skeleton only hides faces completely", ["Full", "Skeleton only"], "Skeleton only" if s.skeleton_only else "Full"),
         ("Return to start screen", "After this long without a hand", [f"{n} s" for n in config.IDLE_SECOND_CHOICES], f"{s.idle_seconds} s"),
         ("Leaderboard", "Press 5 twice to clear it", ["Keep", "Clear now"], "Clear now" if session.admin_clear_armed else "Keep"),
+        ("Sound", "Countdown ticks and result jingles", ["On", "Off"], "On" if s.sound else "Off"),
     ]
     for i, (label, hint, options, current) in enumerate(rows):
-        y = 144 + i * 92
+        y = 138 + i * 78
         _keycap(c, 780, y + 10, str(i + 1))
         c.text(820, y + 10, label, 18, theme.INK, True)
         c.text(780, y + 34, hint, 13, theme.MUTED)
@@ -733,10 +767,11 @@ def _admin_overlay(c, session):
             if not on:
                 c.rect(x + 1, y + 53, 94, 32, fill=theme.WHITE, radius=8)
             c.text(x + 48, y + 69, option, 14, theme.WHITE if on else theme.INK2, True, "mm")
-    c.text(780, 636, "Press 1 to 5 to change a setting. Saved straight away.", 14, theme.MUTED)
+    c.text(780, 628, "Press 1 to 6 to change a setting. Saved straight away.", 14, theme.MUTED)
+    c.text(780, 654, "Press Q to quit the game.", 14, theme.INK2, True)
 
 
-def render_camera_problem(w, h, now, retry_in):
+def render_camera_problem(w, h, now, retry_in, hint="Ctrl+A, then Q to quit"):
     """Shown when the camera stops sending pictures. The game keeps trying by itself."""
     L = _layout(w, h)
     c = _begin(L, "camera-problem", lambda cv: draw_card(cv, 340, 150, 600, 420, accent=theme.AMBER))
@@ -749,7 +784,7 @@ def render_camera_problem(w, h, now, retry_in):
         c.text(400, 408 + i * 34, f"{i + 1}   {line}", 18, theme.INK2)
     _spinner(c, 574, 525, now)
     c.text(600, 525, f"Retrying… {max(0, math.ceil(retry_in))}", 16, theme.AMBER_D, True)
-    _hints(c, [("Q", "Quit")], 678)
+    c.text(640, 678, hint, 15, theme.MUTED, False, "mm")
     return _bgr(c)
 
 
@@ -762,6 +797,8 @@ def render_ui(session, w, h, now, live_gesture, view):
         c = _start(session, L, now)
     elif state == STATE_NAME_INPUT:
         c = _name(session, L, now)
+    elif state == STATE_NAME_CONFIRM:
+        c = _confirm(session, L, now)
     elif state == STATE_CAMERA_CHECK:
         c = _check_screen(session, L, now, live_gesture, view)
     elif state == STATE_SUMMARY:

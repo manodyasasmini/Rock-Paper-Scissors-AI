@@ -343,6 +343,8 @@ Designed in `design/ui-mockup.html` and built in `ui/screens.py`. Drawn for a bu
 - **"Adaptive AI"** replaces the label "Markov AI", since the AI now blends four predictors.
 - **Credit line** "Created by SMS Abeyrathne · 235501H · BSc (Hons) Artificial Intelligence" on the start screen and the report. The game doesn't mention any event or the university.
 
+**Added after the first build:** an "Is this you?" step when a name is already taken, short sounds (countdown ticks, win/lose/draw, report; switch in Ctrl+A), `Q` only quits from the admin panel, and `tools/make_screenshots.py` for the README and poster pictures.
+
 **Also drawn:** a missed-round screen, camera problem, hidden admin settings, a "Still there?" prompt, and a design-system sheet.
 
 **Work once the design is approved**

@@ -1,5 +1,6 @@
 """Game state, scoring and keyboard rules. Knows nothing about cameras or drawing."""
 from collections import deque
+from datetime import datetime
 
 import config
 from ai.engine import CHOICES, AdaptiveEngine, explain
@@ -12,6 +13,7 @@ GUEST_NAME = "Guest"  # never saved: each guest starts fresh and leaves nothing 
 
 STATE_START = "START"                    # Leaderboard and "press SPACE"
 STATE_NAME_INPUT = "NAME_INPUT"          # Step 1: typing a name
+STATE_NAME_CONFIRM = "NAME_CONFIRM"      # The name already belongs to someone: is this you?
 STATE_CAMERA_CHECK = "CAMERA_CHECK"      # Step 2: hold a hand up, then the match begins
 STATE_IDLE = "IDLE"                      # Between matches: waiting to start a round
 STATE_COUNTDOWN = "COUNTDOWN"            # 3, 2, 1 countdown
@@ -20,7 +22,7 @@ STATE_SUMMARY = "SUMMARY"                # End of a match: the report card
 STATE_REPLAY = "REPLAY"                  # Every round of the match, with what the AI expected
 
 # States where a visitor may have walked away
-QUIET_STATES = (STATE_NAME_INPUT, STATE_CAMERA_CHECK, STATE_IDLE, STATE_SHOW_RESULT, STATE_SUMMARY, STATE_REPLAY)
+QUIET_STATES = (STATE_NAME_INPUT, STATE_NAME_CONFIRM, STATE_CAMERA_CHECK, STATE_IDLE, STATE_SHOW_RESULT, STATE_SUMMARY, STATE_REPLAY)
 
 ACTION_QUIT = "quit"
 ACTION_TOGGLE_FULLSCREEN = "fullscreen"
@@ -31,7 +33,7 @@ KEY_BACKSPACE = 8
 KEY_SPACE = 32
 KEY_CTRL_A = 1
 
-ADMIN_ROWS = 5
+ADMIN_ROWS = 6
 
 
 def determine_winner(p_move, a_move):
@@ -56,6 +58,11 @@ class GameSession:
 
         self.player_name = None  # None until a profile is chosen, so nothing is saved before then
         self.input_text = ""
+        self.name_notice = ""        # shown on the name screen, e.g. after answering "not me"
+        self.pending_name = None      # an existing name the visitor is being asked about
+        self.pending_info = {}
+        self.events = []              # things that happened, for sounds: tick0..2, win, lose, draw, missed, passed, report
+        self._beat = -1
         self.last_activity = 0.0
         self.hold_since = None
         self.check_passed = False   # the camera check is done; the player starts the match with SPACE
@@ -121,6 +128,13 @@ class GameSession:
         self.prediction = None
         self.explanation = ""
 
+    def emit(self, name):
+        self.events.append(name)
+
+    def take_events(self):
+        events, self.events = self.events, []
+        return events
+
     def refresh_leaderboard(self):
         self.leaderboard_rows = leaderboard.top(self.store.load_all())
 
@@ -128,6 +142,7 @@ class GameSession:
         self.save()
         self.player_name = None
         self.input_text = ""
+        self.name_notice = ""
         self.hold_since = None
         self._reset_match()
         self.refresh_leaderboard()
@@ -176,11 +191,18 @@ class GameSession:
         self.state = STATE_COUNTDOWN
         self.state_start_time = now
         self.last_activity = now
+        self._beat = -1
 
     def update(self, now, live_gesture):
-        if self.state == STATE_COUNTDOWN and now - self.state_start_time >= self.countdown_duration:
-            self._finish_round(now, live_gesture)
-            return
+        if self.state == STATE_COUNTDOWN:
+            elapsed = now - self.state_start_time
+            if elapsed >= self.countdown_duration:
+                self._finish_round(now, live_gesture)
+                return
+            beat = int(elapsed / (self.countdown_duration / 3))
+            if beat != self._beat:
+                self._beat = beat
+                self.emit(f"tick{beat}")
 
         if live_gesture and self.state in QUIET_STATES:
             self.last_activity = now
@@ -191,6 +213,7 @@ class GameSession:
                 self.hold_since = now
             elif now - self.hold_since >= config.HOLD_TO_START_SECONDS:
                 self.check_passed = True
+                self.emit("passed")
         if self.state in QUIET_STATES and self.idle_remaining(now) == 0.0:
             self.admin_open = False
             self.go_to_start()
@@ -213,6 +236,7 @@ class GameSession:
             self.score_ties += 1
             self.match_history.append("D")
 
+        self.emit({"PLAYER": "win", "AI": "lose", "TIE": "draw", "INVALID": "missed"}[self.round_result])
         self.explanation = explain(self.prediction, self.player_move)
         if self.round_result != "INVALID":
             expected = self.prediction.expected
@@ -235,13 +259,14 @@ class GameSession:
                 self.store.save_player(self.player_name, {"best_match": result})
             self.rank = leaderboard.rank_of(self.store.load_all(), self.player_name)
         self.state = STATE_SUMMARY
+        self.emit("report")
 
     # ---- keyboard ----
     def handle_key(self, key, now):
         """Apply a key press. Returns an ACTION_ the window has to act on, or None."""
         was_warned = self.idle_remaining(now) is not None
         self.last_activity = now
-        if was_warned and key not in (ord("q"), ord("Q")):
+        if was_warned:
             return None  # the first key just answers "Still there?"
 
         if key == KEY_CTRL_A and self.state != STATE_NAME_INPUT:
@@ -255,15 +280,19 @@ class GameSession:
             self._handle_name_key(key)
             return None
 
-        if key in (ord("q"), ord("Q")):
-            self.save()
-            return ACTION_QUIT
         if key in (ord("f"), ord("F")):
             return ACTION_TOGGLE_FULLSCREEN
 
         if self.state == STATE_START:
             if key in (KEY_SPACE, KEY_ENTER):
                 self.input_text = ""
+                self.state = STATE_NAME_INPUT
+        elif self.state == STATE_NAME_CONFIRM:
+            if key in (ord("y"), ord("Y")):
+                self._begin_player(self.pending_name)
+            elif key in (ord("n"), ord("N"), KEY_ESC):
+                self.name_notice = f"Someone already plays as {self.pending_name}. Add a letter or number to make yours different."
+                self.pending_name = None
                 self.state = STATE_NAME_INPUT
         elif self.state == STATE_CAMERA_CHECK:
             if key == KEY_SPACE:
@@ -296,19 +325,50 @@ class GameSession:
 
     def _handle_name_key(self, key):
         if key == KEY_ENTER:
-            self.switch_to_player(self.input_text)
-            self.hold_since = None
-            self.check_passed = False
-            self.state = STATE_CAMERA_CHECK
+            existing = self._existing_name(self.input_text)
+            if existing:
+                self._ask_if_same(existing)
+            else:
+                self._begin_player(self.input_text)
         elif key == KEY_ESC:
+            self.name_notice = ""
             self.state = STATE_START
         elif key == KEY_BACKSPACE:
             self.input_text = self.input_text[:-1]
         elif 32 <= key <= 126 and len(self.input_text) < config.NAME_MAX_LENGTH:
             self.input_text += chr(key)
 
+    def _existing_name(self, typed):
+        """The saved profile this name belongs to, or None for a new name or a guest."""
+        name = typed.strip()
+        if not name or name.lower() == GUEST_NAME.lower():
+            return None
+        return next((existing for existing in self.store.load_all() if existing.lower() == name.lower()), None)
+
+    def _ask_if_same(self, existing):
+        profile = self.store.load_all().get(existing, {})
+        best = profile.get("best_match")
+        info = {"best": f"{best['wins']} – {best['losses']}" if best else None, "last": None}
+        try:
+            info["last"] = datetime.strptime(profile["last_played"], "%Y-%m-%d %H:%M:%S").strftime("%d %b, %H:%M").lstrip("0")
+        except (KeyError, ValueError):
+            pass
+        self.pending_name, self.pending_info = existing, info
+        self.state = STATE_NAME_CONFIRM
+
+    def _begin_player(self, name):
+        self.switch_to_player(name)
+        self.pending_name = None
+        self.name_notice = ""
+        self.hold_since = None
+        self.check_passed = False
+        self.state = STATE_CAMERA_CHECK
+
     def _handle_admin_key(self, key):
         row = key - ord("0")
+        if key in (ord("q"), ord("Q")):
+            self.save()
+            return ACTION_QUIT
         if key == KEY_ESC:
             self.admin_open = False
             self.admin_clear_armed = False
@@ -331,5 +391,7 @@ class GameSession:
             self.settings.skeleton_only = not self.settings.skeleton_only
         elif row == 4:
             self.settings.cycle_idle_seconds()
+        elif row == 6:
+            self.settings.sound = not self.settings.sound
         self.settings.save()
         return None

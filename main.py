@@ -7,6 +7,7 @@ import cv2
 import config
 from game.session import ACTION_QUIT, ACTION_TOGGLE_FULLSCREEN, GameSession
 from game.settings import Settings
+from game.sound import Sounds
 from game.store import PlayerStore
 from ui.camera import render_camera
 from ui.screens import camera_size, clear_caches, render_camera_problem, render_ui
@@ -35,6 +36,8 @@ def main():
     settings = Settings(config.SETTINGS_FILE)
     session = GameSession(PlayerStore(config.DATA_FILE), settings=settings)
     smoother = GestureSmoother()
+    sounds = Sounds(settings.sound)
+    admin_armed = False
 
     cv2.namedWindow(config.WINDOW_NAME, cv2.WINDOW_NORMAL)
     cv2.setWindowProperty(config.WINDOW_NAME, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
@@ -46,7 +49,7 @@ def main():
     print("==========================================")
     print("  Rock Paper Scissors AI                  ")
     print("  [SPACE] Play      [Q] Quit              ")
-    print("  [F] Fullscreen    [Ctrl+A] Admin        ")
+    print("  [F] Fullscreen    [Ctrl+A] Admin (then Q to quit)")
     print("==========================================")
 
     try:
@@ -60,9 +63,14 @@ def main():
                     next_retry = now + CAMERA_RETRY_SECONDS
                 cv2.imshow(config.WINDOW_NAME, render_camera_problem(*size, now, next_retry - now))
                 key = cv2.waitKey(30) & 0xFF
-                if key in (ord("q"), ord("Q")) or cv2.getWindowProperty(config.WINDOW_NAME, cv2.WND_PROP_VISIBLE) < 1:
+                if key == 1:                                   # Ctrl+A, then Q: only the operator quits
+                    admin_armed = True
+                elif key in (ord("q"), ord("Q")) and admin_armed:
+                    break
+                if cv2.getWindowProperty(config.WINDOW_NAME, cv2.WND_PROP_VISIBLE) < 1:
                     break
                 continue
+            admin_armed = False
             next_retry = 0.0
             frames += 1
             if frames % 15 == 1:
@@ -84,11 +92,17 @@ def main():
                 smoother.clear()
 
             session.update(now, live_gesture)
+            sounds.enabled = settings.sound
+            for event in session.take_events():
+                sounds.play(event)
             cv2.imshow(config.WINDOW_NAME, render_ui(session, width, height, now, live_gesture, view))
 
             key = cv2.waitKey(1) & 0xFF
             if key != NO_KEY:
                 action = session.handle_key(key, now)
+                sounds.enabled = settings.sound
+                for event in session.take_events():
+                    sounds.play(event)
                 if action == ACTION_QUIT:
                     break
                 if action == ACTION_TOGGLE_FULLSCREEN:

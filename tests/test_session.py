@@ -7,7 +7,7 @@ import config
 from ai.engine import MarkovEngine, Prediction
 from game.session import (ACTION_QUIT, ACTION_TOGGLE_FULLSCREEN, KEY_BACKSPACE, KEY_CTRL_A, KEY_ENTER, KEY_ESC,
                           KEY_SPACE, STATE_CAMERA_CHECK, STATE_COUNTDOWN, STATE_IDLE, STATE_NAME_INPUT,
-                          STATE_REPLAY, STATE_SHOW_RESULT, STATE_START, STATE_SUMMARY, GameSession,
+                          STATE_NAME_CONFIRM, STATE_REPLAY, STATE_SHOW_RESULT, STATE_START, STATE_SUMMARY, GameSession,
                           determine_winner)
 from game.settings import Settings
 from game.store import PlayerStore
@@ -33,6 +33,8 @@ def begin(session, name="", now=0.0):
     session.handle_key(KEY_SPACE, now)
     type_name(session, name, now)
     session.handle_key(KEY_ENTER, now)
+    if session.state == STATE_NAME_CONFIRM:        # a name that is already taken: say "yes, that's me"
+        session.handle_key(ord("y"), now)
     assert session.state == STATE_CAMERA_CHECK
 
 
@@ -248,7 +250,9 @@ def test_a_returning_player_keeps_what_the_ai_learned(store):
 
 def test_window_keys_are_returned_as_actions(session):
     assert session.handle_key(ord("f"), 0) == ACTION_TOGGLE_FULLSCREEN
-    assert session.handle_key(ord("q"), 0) == ACTION_QUIT
+    assert session.handle_key(ord("q"), 0) is None            # a visitor cannot quit
+    session.handle_key(KEY_CTRL_A, 0)
+    assert session.handle_key(ord("q"), 0) == ACTION_QUIT     # the operator can, from the admin panel
 
 
 def test_q_and_f_are_just_letters_on_the_name_screen(session):
@@ -491,4 +495,89 @@ def test_going_back_to_the_name_resets_the_camera_check(session):
     assert session.check_passed
     session.handle_key(KEY_ESC, 5.0)
     session.handle_key(KEY_ENTER, 5.0)
+    session.handle_key(ord("y"), 5.0)
     assert session.state == STATE_CAMERA_CHECK and not session.check_passed
+
+
+# ---- a name that is already taken ----
+def test_a_taken_name_asks_if_it_is_you(session, store):
+    store.save_player("Sam", {"best_match": {"wins": 9, "losses": 4, "ties": 2, "fav": "ROCK"}})
+    session.handle_key(KEY_SPACE, 0)
+    type_name(session, "sam")
+    session.handle_key(KEY_ENTER, 0)
+    assert session.state == STATE_NAME_CONFIRM
+    assert session.pending_name == "Sam" and session.pending_info["best"] == "9 – 4"
+    session.handle_key(ord("y"), 0)
+    assert session.state == STATE_CAMERA_CHECK and session.player_name == "Sam"
+
+
+def test_not_me_returns_to_the_name_with_a_note_and_the_text_kept(session, store):
+    store.save_player("Sam", {"transitions": {}})
+    session.handle_key(KEY_SPACE, 0)
+    type_name(session, "Sam")
+    session.handle_key(KEY_ENTER, 0)
+    session.handle_key(ord("n"), 0)
+    assert session.state == STATE_NAME_INPUT and session.input_text == "Sam"
+    assert "already plays as Sam" in session.name_notice
+    type_name(session, " K")
+    session.handle_key(KEY_ENTER, 0)
+    assert session.state == STATE_CAMERA_CHECK and session.player_name == "Sam K"    # a new, separate player
+    assert set(store.load_all()) == {"Sam", "Sam K"}
+    assert session.name_notice == ""
+
+
+def test_enter_alone_does_not_claim_someone_elses_name(session, store):
+    store.save_player("Sam", {"transitions": {}})
+    session.handle_key(KEY_SPACE, 0)
+    type_name(session, "Sam")
+    session.handle_key(KEY_ENTER, 0)
+    session.handle_key(KEY_ENTER, 0)
+    assert session.state == STATE_NAME_CONFIRM
+
+
+def test_new_names_and_guests_are_not_asked(session):
+    begin(session, "Brandnew")
+    assert session.player_name == "Brandnew"
+    session.go_to_start()
+    session.handle_key(KEY_SPACE, 0)
+    session.handle_key(KEY_ENTER, 0)
+    assert session.is_guest and session.state == STATE_CAMERA_CHECK
+
+
+# ---- sounds ----
+def test_the_countdown_ticks_once_per_beat_then_the_result_sounds(session):
+    begin(session)
+    fix_ai_move(session, "SCISSORS")
+    session.take_events()
+    session.start_round(10.0)
+    for moment in (10.0, 10.4, 11.1, 11.5, 12.2, 12.9):
+        session.update(moment, "ROCK")
+    session.update(13.0, "ROCK")
+    assert session.take_events() == ["tick0", "tick1", "tick2", "win"]
+    assert session.take_events() == []
+
+
+def test_a_missed_round_and_a_draw_sound_differently(session):
+    begin(session)
+    fix_ai_move(session, "ROCK")
+    session.take_events()
+    play_round(session, "ROCK")
+    play_round(session, None)
+    assert session.take_events() == ["draw", "missed"]
+
+
+def test_passing_the_camera_check_and_finishing_a_match_make_a_sound(session):
+    begin(session, "Ana")
+    session.take_events()
+    session.update(1.0, "PAPER")
+    session.update(1.0 + config.HOLD_TO_START_SECONDS, "PAPER")
+    assert session.take_events() == ["passed"]
+    finish_match(session)
+    assert "report" in session.take_events()
+
+
+def test_the_sound_setting_is_toggled_from_the_admin_panel(session):
+    assert session.settings.sound is True
+    session.handle_key(KEY_CTRL_A, 0)
+    session.handle_key(ord("6"), 0)
+    assert session.settings.sound is False

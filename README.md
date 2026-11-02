@@ -11,23 +11,29 @@ An interactive, real-time Computer Vision game that lets you play **Rock-Paper-S
 
 ## 📸 Gameplay & Interface Previews
 
-### 1. Player Profiles & Session Management
-| Profile Login Screen | Returning Player Decision Modal |
-| :---: | :---: |
-| ![Profile Login Screen](demo/Screenshot%202026-09-04%20213000.png) | ![Session Decision Modal](demo/Screenshot%202026-09-04%20213010.png) |
-| *Personalized profile login for unique AI tracking* | *Choose between starting fresh or resuming scores* |
+The pictures use the plain "skeleton only" camera view and made-up leaderboard names. Run `python tools/make_screenshots.py` to redraw them.
 
-### 2. Live Arena & Hand Landmark Tracking
-| Arena Idle & Ready Screen | Live Round Countdown & Tracking |
-| :---: | :---: |
-| ![Arena Ready Screen](demo/Screenshot%202026-09-04%20213200.png) | ![Live Round Countdown](demo/Screenshot%202026-09-04%20213056.png) |
-| *Arena ready prompt with live gesture tracking* | *3... 2... 1... circular countdown gauge triggered via [SPACE]* |
-
-### 3. Match Outcomes & Round Results
-| Player Victory | AI Victory | Draw Match |
+### 1. Getting in
+| Start screen with the leaderboard | Your name | Is this you? |
 | :---: | :---: | :---: |
-| ![Player Victory](demo/Screenshot%202026-09-04%20213133.png) | ![AI Victory](demo/Screenshot%202026-09-04%20213147.png) | ![Draw Match](demo/Screenshot%202026-09-04%20213110.png) |
-| *Rock counters Scissors (+1 to Player)* | *Scissors counters Paper (+1 to AI)* | *Matching moves (Draw / Streak maintained)* |
+| ![Start screen](demo/01-start.png) | ![Name](demo/02-name.png) | ![Is this you](demo/03-is-this-you.png) |
+| *Who beat the AI most, then press SPACE* | *The only typing* | *Asked when a name is already taken* |
+
+### 2. The match
+| Camera check | Ready | Countdown |
+| :---: | :---: | :---: |
+| ![Camera check](demo/04-camera-check.png) | ![Ready](demo/05-ready.png) | ![Countdown](demo/06-countdown.png) |
+| *Hold a hand up until everything is ticked* | *Press SPACE for each round* | *The AI has already locked its move* |
+
+### 3. Results
+| You win | AI wins | Draw |
+| :---: | :---: | :---: |
+| ![You win](demo/07-you-win.png) | ![AI wins](demo/08-ai-wins.png) | ![Draw](demo/09-draw.png) |
+
+| Learn mode | Missed round | Report card |
+| :---: | :---: | :---: |
+| ![Learn mode](demo/10-learn-mode.png) | ![Missed round](demo/11-missed.png) | ![Report card](demo/12-report.png) |
+| *What the AI expected, and why (press H)* | *No hand seen: the round does not count* | *A title, how readable you were, and the habits found* |
 
 ---
 
@@ -87,7 +93,7 @@ An interactive, real-time Computer Vision game that lets you play **Rock-Paper-S
 ## 🕹️ How a visit works
 
 1. **Start screen:** the leaderboard shows who beat the AI most. Press `SPACE`.
-2. **Your name:** type a name (up to 12 letters) and press `ENTER`. Leave it empty to play as a guest, who is never saved.
+2. **Your name:** type a name (up to 12 letters) and press `ENTER`. Leave it empty to play as a guest, who is never saved. If someone already plays under that name, the game asks "Is this you?" (`Y` or `N`), so two visitors never share scores.
 3. **Camera check:** hold your hand up for two seconds until everything is ticked, then press `SPACE` to start the match.
 4. **The match:** 15 rounds. Show rock, paper or scissors on SHOOT! The AI has already locked its move.
 5. **Report card:** a title, how readable you were, the habits it found, and your leaderboard rank.
@@ -102,8 +108,8 @@ An interactive, real-time Computer Vision game that lets you play **Rock-Paper-S
 | **`[R]`** | On the report: see every round |
 | **`[N]` / `[P]`** | Next player (back to the start screen) |
 | **`[F]`** | Toggle Fullscreen / Windowed mode |
-| **`[Ctrl+A]`** | Admin settings: match length, default mode, hide the camera picture, idle time, clear the leaderboard |
-| **`[Q]`** | Save and quit game |
+| **`[Ctrl+A]`** | Admin settings: match length, default mode, hide the camera picture, idle time, clear the leaderboard, sound |
+| **`[Q]`** | Quit, but only while the admin panel (Ctrl+A) is open, so visitors cannot close the game |
 
 ---: | :--- |
 | **`[SPACE]`** | Start round / trigger 3-second animated countdown |
@@ -111,7 +117,7 @@ An interactive, real-time Computer Vision game that lets you play **Rock-Paper-S
 | **`[F]`** | Toggle Fullscreen / Windowed mode |
 | **`[D]`** | Switch AI Mode (*Predictive* vs *Random*) |
 | **`[R]`** | Reset scoreboard & streaks |
-| **`[Q]`** | Save and quit game |
+| **`[Q]`** | Quit, but only while the admin panel (Ctrl+A) is open, so visitors cannot close the game |
 
 ---
 

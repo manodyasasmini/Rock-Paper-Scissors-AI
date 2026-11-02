@@ -11,6 +11,7 @@ class Settings:
         self.match_rounds = config.MATCH_ROUNDS
         self.learn_mode = config.LEARN_MODE_DEFAULT
         self.skeleton_only = False
+        self.sound = True
         self.idle_seconds = config.IDLE_SECONDS
         self._load()
 
@@ -28,6 +29,8 @@ class Settings:
             self.learn_mode = data["learn_mode"]
         if isinstance(data.get("skeleton_only"), bool):
             self.skeleton_only = data["skeleton_only"]
+        if isinstance(data.get("sound"), bool):
+            self.sound = data["sound"]
         if data.get("idle_seconds") in config.IDLE_SECOND_CHOICES:
             self.idle_seconds = data["idle_seconds"]
 
@@ -37,7 +40,8 @@ class Settings:
         tmp = self.path + ".tmp"
         with open(tmp, "w") as f:
             json.dump({"match_rounds": self.match_rounds, "learn_mode": self.learn_mode,
-                       "skeleton_only": self.skeleton_only, "idle_seconds": self.idle_seconds}, f, indent=2)
+                       "skeleton_only": self.skeleton_only, "sound": self.sound,
+                       "idle_seconds": self.idle_seconds}, f, indent=2)
         os.replace(tmp, self.path)
 
     @staticmethod

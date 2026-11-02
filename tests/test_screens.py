@@ -259,3 +259,29 @@ def test_the_chip_names_the_detected_move(session):
     paper = render_ui(session, 1280, 720, 1.0, "PAPER", view)
     chip_area = (slice(95, 130), slice(300, 460))
     assert not np.array_equal(rock[chip_area], paper[chip_area])
+
+
+def test_the_is_this_you_screen_renders_and_the_name_screen_shows_the_note(session, store):
+    import json
+    with open(store.path, "w") as f:    # written by hand, because save_player stamps the current time
+        json.dump({"Sam": {"best_match": {"wins": 9, "losses": 4, "ties": 2, "fav": "ROCK"},
+                           "last_played": "2026-11-02 21:30:00"}}, f)
+    session.handle_key(KEY_SPACE, 0)
+    for ch in "Sam":
+        session.handle_key(ord(ch), 0)
+    plain = render_ui(session, 1280, 720, 0.0, None, None)
+    session.handle_key(KEY_ENTER, 0)
+    assert session.state == "NAME_CONFIRM" and session.pending_info["last"] == "2 Nov, 21:30"
+    confirm = render_ui(session, 1280, 720, 0.0, None, None)
+    assert confirm.shape == (720, 1280, 3) and not np.array_equal(plain, confirm)
+    session.handle_key(ord("n"), 0)
+    with_note = render_ui(session, 1280, 720, 0.0, None, None)
+    assert not np.array_equal(plain, with_note)
+
+
+def test_the_admin_panel_lists_sound_and_the_quit_key(session):
+    session.handle_key(KEY_CTRL_A, 0)
+    on = render_ui(session, 1280, 720, 0.0, None, None)
+    session.handle_key(ord("6"), 0)
+    off = render_ui(session, 1280, 720, 0.0, None, None)
+    assert not np.array_equal(on, off)
