@@ -201,25 +201,26 @@ def _build_start(c):
 
 def _start(session, L, now):
     c = _begin(L, "start", _build_start)
-    c.runs(390, 96, [("ROCK PAPER SCISSORS ", theme.INK), ("AI", theme.PLAYER)], 44)
-    c.text(390, 142, "An AI that learns your habits. Can you beat it?", 19, theme.MUTED, False, "mm")
+    dy = 64   # the title, hands and button are centred on the screen
+    c.runs(390, 96 + dy, [("ROCK PAPER SCISSORS ", theme.INK), ("AI", theme.PLAYER)], 44)
+    c.text(390, 142 + dy, "An AI that learns your habits. Can you beat it?", 19, theme.MUTED, False, "mm")
     for move, cx, angle, delay in (("ROCK", 215, 5, 0), ("PAPER", 390, 0, 0.5), ("SCISSORS", 565, -5, 1.0)):
         lift = 12 * (0.5 - 0.5 * math.cos(2 * math.pi * (now + delay) / 3.4))
         card = _hand_card(L, move, angle)
-        c.img.paste(card, (L.x(cx) - card.width // 2, L.y(296 - lift) - card.height // 2), card)
+        c.img.paste(card, (L.x(cx) - card.width // 2, L.y(296 + dy - lift) - card.height // 2), card)
 
-    c.rect(214, 435, 352, 54, fill=theme.PLAYER, radius=27)
+    c.rect(214, 435 + dy, 352, 54, fill=theme.PLAYER, radius=27)
     parts = [("PRESS", None), ("SPACE", "key"), ("TO PLAY", None)]
     widths = [c.tw(t, 26, True) if k is None else max(26, c.tw(t, 13, True) + 16) for t, k in parts]
     x = 390 - (sum(widths) + 24) / 2
     for (text, kind), width in zip(parts, widths):
         if kind is None:
-            c.text(x, 462, text, 26, theme.WHITE, True)
+            c.text(x, 462 + dy, text, 26, theme.WHITE, True)
         else:
-            c.rect(x, 450, width, 24, fill=theme.WHITE, radius=8)
-            c.text(x + width / 2, 462, text, 13, theme.PLAYER_D, True, "mm")
+            c.rect(x, 450 + dy, width, 24, fill=theme.WHITE, radius=8)
+            c.text(x + width / 2, 462 + dy, text, 13, theme.PLAYER_D, True, "mm")
         x += width + 12
-    c.text(390, 512, "Beat the AI to climb the leaderboard", 15, theme.MUTED, False, "mm")
+    c.text(390, 512 + dy, "Beat the AI to climb the leaderboard", 15, theme.MUTED, False, "mm")
     c.text(390, 664, "Your hand is tracked live on this computer. No video is saved.", 13, theme.FAINT, False, "mm")
 
     # Leaderboard
