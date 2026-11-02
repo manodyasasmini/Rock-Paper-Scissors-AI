@@ -1,30 +1,96 @@
-"""Screens, drawn with Pillow on top of the hand viewport."""
+"""Screens, drawn with Pillow. The player's card holds the live camera; the AI's card holds its hand."""
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw
 
+from ai.engine import CHOICES
 from game.session import (STATE_COUNTDOWN, STATE_IDLE, STATE_NAME_INPUT,
                           STATE_SESSION_CHOICE, STATE_SHOW_RESULT)
-from ui.theme import (FONT_BANNER, FONT_BIG_COUNT, FONT_CARD_MOVE, FONT_CARD_TITLE,
-                      FONT_HISTORY, FONT_INPUT, FONT_LABEL, FONT_LABEL_BOLD,
-                      FONT_MODAL_TITLE, FONT_SCORE, FONT_SUB_BANNER, FONT_TITLE)
-from vision.viewport import (HINT_EDGE_LEFT, HINT_EDGE_RIGHT, HINT_EDGE_TOP,
-                             HINT_TOO_CLOSE, HINT_TOO_FAR, STATUS_LOST, STATUS_TRACKING)
+from ui.gestures import gesture_icon
+from ui.theme import (FONT_BANNER, FONT_CARD_MOVE, FONT_CARD_TITLE, FONT_HISTORY, FONT_INPUT,
+                      FONT_LABEL, FONT_LABEL_BOLD, FONT_MODAL_TITLE, FONT_SCORE,
+                      FONT_SUB_BANNER, FONT_TITLE)
 
-HINT_MESSAGES = {
-    HINT_TOO_FAR: "MOVE CLOSER",
-    HINT_TOO_CLOSE: "MOVE BACK",
-    HINT_EDGE_LEFT: "MOVE RIGHT",
-    HINT_EDGE_RIGHT: "MOVE LEFT",
-    HINT_EDGE_TOP: "LOWER YOUR HAND",
-}
+CARD_MARGIN = 30
+CARD_GAP = 20
+CARD_HEADER = 54
+ARENA_TOP = 140
+ARENA_BOTTOM_MARGIN = 85
+STRIP_MIN_HEIGHT = 80
+
+PLAYER_ACCENT = (0, 220, 255, 255)
+AI_ACCENT = (255, 60, 130, 255)
 
 
-def viewport_size(w, h):
-    """Size of the centre hand viewport for a canvas of this size."""
-    arena_h = h - 140 - 85
-    side = min(arena_h - 20, 520)
-    return side, side
+def arena_layout(w, h):
+    """Where the two cards, the camera panel and the move strips go on a canvas of this size."""
+    card_w = (w - 2 * CARD_MARGIN - CARD_GAP) // 2
+    card_y1 = ARENA_TOP
+    card_y2 = h - ARENA_BOTTOM_MARGIN
+    panel_w = card_w - 40
+    panel_h = min(panel_w * 9 // 16, card_y2 - card_y1 - CARD_HEADER - 10 - 14 - STRIP_MIN_HEIGHT)
+    panel_y1 = card_y1 + CARD_HEADER
+    return {
+        "card_w": card_w, "card_y1": card_y1, "card_y2": card_y2,
+        "player_x1": CARD_MARGIN, "ai_x1": CARD_MARGIN + card_w + CARD_GAP,
+        "panel_w": panel_w, "panel_h": panel_h, "panel_y1": panel_y1,
+        "strip_y1": panel_y1 + panel_h + 10, "strip_y2": card_y2 - 14,
+    }
+
+
+def camera_size(w, h):
+    """Size the camera picture has to be for a canvas of this size."""
+    layout = arena_layout(w, h)
+    return layout["panel_w"], layout["panel_h"]
+
+
+_mask_cache = {}
+
+def _rounded_mask(w, h, radius):
+    if (w, h, radius) not in _mask_cache:
+        mask = Image.new("L", (w, h), 0)
+        ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1], radius=radius, fill=255)
+        _mask_cache[(w, h, radius)] = mask
+    return _mask_cache[(w, h, radius)]
+
+
+def _card_frame(draw, x1, y1, x2, y2, accent, glow, fill):
+    draw.rounded_rectangle([x1 - 2, y1 - 2, x2 + 2, y2 + 2], radius=18, fill=glow)
+    draw.rounded_rectangle([x1, y1, x2, y2], radius=16, fill=fill, outline=accent, width=2)
+
+
+def _pill(draw, cx, cy, text, font, color, pad=16, height=34):
+    left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
+    half_w = (right - left) // 2 + pad
+    draw.rounded_rectangle([cx - half_w, cy - height // 2, cx + half_w, cy + height // 2], radius=height // 2,
+                           fill=(15, 18, 28, 220), outline=color, width=1)
+    draw.text((cx, cy), text, font=font, fill=color, anchor="mm")
+
+
+def _status(draw, right, cy, text, color):
+    """A dot and a short status, right-aligned."""
+    left, top, text_right, bottom = draw.textbbox((0, 0), text, font=FONT_LABEL_BOLD)
+    draw.text((right, cy), text, font=FONT_LABEL_BOLD, fill=color, anchor="rm")
+    dot_x = right - (text_right - left) - 22
+    draw.ellipse([dot_x, cy - 5, dot_x + 10, cy + 5], fill=color)
+
+
+def _move_strip(overlay, draw, x1, y1, x2, y2, active, accent, active_fill):
+    """Rock, paper and scissors side by side, with the chosen one lit."""
+    gap = 14
+    tile_w = (x2 - x1 - 2 * gap) // 3
+    for i, move in enumerate(CHOICES):
+        tx1 = x1 + i * (tile_w + gap)
+        tx2 = tx1 + tile_w
+        lit = move == active
+        draw.rounded_rectangle([tx1, y1, tx2, y2], radius=14, fill=active_fill if lit else (20, 28, 44, 220),
+                               outline=accent if lit else (45, 60, 85, 255), width=3 if lit else 1)
+        icon = gesture_icon(move, y2 - y1 - 10, opacity=1.0 if lit else (0.55 if active is None else 0.28))
+        if icon is not None:
+            overlay.alpha_composite(icon, (tx1 + (tile_w - icon.width) // 2, y1 + 6))
+        else:
+            draw.text(((tx1 + tx2) // 2, (y1 + y2) // 2), move, font=FONT_LABEL_BOLD,
+                      fill=accent if lit else (120, 140, 170, 255), anchor="mm")
 
 
 _background_cache = {}
@@ -187,138 +253,96 @@ def render_ui(session, w, h, current_time, live_gesture, view):
         hx += 26
 
     # -------------------------------------------------------------
-    # B. ARENA 3-COLUMN LAYOUT: (YOUR CARD | CAMERA VIEWPORT | AI CARD)
+    # B. ARENA: PLAYER CARD (live camera) | AI CARD (its hand)
     # -------------------------------------------------------------
-    arena_y = 140
-    arena_h = h - arena_y - 85
+    lay = arena_layout(w, h)
+    cam_w, cam_h = lay["panel_w"], lay["panel_h"]
+    card_y1, card_y2 = lay["card_y1"], lay["card_y2"]
+    px1 = lay["player_x1"]
+    px2 = px1 + lay["card_w"]
+    ax1 = lay["ai_x1"]
+    ax2 = ax1 + lay["card_w"]
+    cam_x, cam_y = px1 + 20, lay["panel_y1"]
+    ai_panel_x = ax1 + 20
+    header_y = card_y1 + 30
 
-    # 1. Center hand-tracking viewport: only the hand is shown, never the room or the face
-    cam_w, cam_h = viewport_size(w, h)
-    cam_x = (w - cam_w) // 2
-    cam_y = arena_y + (arena_h - cam_h) // 2
+    # 1. Player card
+    _card_frame(draw, px1, card_y1, px2, card_y2, PLAYER_ACCENT, (0, 240, 255, 30), (15, 22, 34, 245))
+    draw.text((px1 + 24, header_y), "YOUR ACTION", font=FONT_CARD_TITLE, fill=PLAYER_ACCENT, anchor="lm")
+
+    if session.state == STATE_SHOW_RESULT:
+        shown_move = session.player_move
+        status_text = f"FINAL MOVE: {shown_move}" if shown_move else "NO MOVE"
+        status_col = (0, 255, 180, 255) if shown_move else (255, 70, 70, 255)
+    else:
+        shown_move = live_gesture
+        status_text = f"DETECTED: {live_gesture}" if live_gesture else "SEARCHING..."
+        status_col = (0, 255, 150, 255) if live_gesture else (255, 180, 50, 255)
+    _status(draw, px2 - 24, header_y, status_text, status_col)
 
     cam_pil = Image.fromarray(cv2.cvtColor(view.image, cv2.COLOR_BGR2RGB)).convert("RGBA")
-    pil_frame.paste(cam_pil, (cam_x, cam_y))
+    overlay.paste(cam_pil, (cam_x, cam_y), _rounded_mask(cam_w, cam_h, 14))
+    draw.rounded_rectangle([cam_x, cam_y, cam_x + cam_w, cam_y + cam_h], radius=14, outline=(0, 220, 255, 200), width=2)
 
-    # Viewport frame, title and tracking indicator
-    draw.rounded_rectangle([cam_x - 3, cam_y - 3, cam_x + cam_w + 3, cam_y + cam_h + 3], radius=16, outline=(0, 220, 255, 200), width=2)
-    draw.text((cam_x + 22, cam_y + 22), "LIVE HAND TRACKING", font=FONT_LABEL_BOLD, fill=(0, 220, 255, 255))
-    tracking = view.status == STATUS_TRACKING
-    dot_col = (0, 255, 150, 255) if tracking else (255, 180, 50, 255)
-    draw.ellipse([cam_x + cam_w - 150, cam_y + 28, cam_x + cam_w - 140, cam_y + 38], fill=dot_col)
-    draw.text((cam_x + cam_w - 132, cam_y + 22), "ACTIVE" if tracking else "SEARCHING", font=FONT_LABEL, fill=dot_col)
-
-    if view.status == STATUS_LOST:
-        draw.text((cam_x + cam_w // 2, cam_y + cam_h // 2), "SHOW YOUR HAND", font=FONT_CARD_TITLE, fill=(120, 140, 170, 255), anchor="mm")
-
-    # Placement hint, and a radar dot showing where the hand is in the camera's view
-    if view.hints and session.state != STATE_COUNTDOWN:
-        draw.text((cam_x + cam_w // 2, cam_y + 60), HINT_MESSAGES[view.hints[0]], font=FONT_LABEL_BOLD, fill=(255, 176, 32, 255), anchor="mm")
-    radar_w, radar_h = 72, 54
-    rx2, ry2 = cam_x + cam_w - 22, cam_y + cam_h - 22
-    rx1, ry1 = rx2 - radar_w, ry2 - radar_h
-    draw.rounded_rectangle([rx1, ry1, rx2, ry2], radius=6, fill=(15, 18, 28, 200), outline=(60, 75, 105, 255), width=1)
-    if view.hand_pos and tracking:
-        hx = rx1 + int(view.hand_pos[0] * radar_w)
-        hy = ry1 + int(view.hand_pos[1] * radar_h)
-        draw.ellipse([hx - 4, hy - 4, hx + 4, hy + 4], fill=(0, 229, 255, 255))
-
-    # Floating Live Gesture Badge inside the viewport
-    badge_str = f"STATUS: {live_gesture}" if live_gesture else "STATUS: SEARCHING..."
-    b_col = (0, 255, 150, 255) if live_gesture else (255, 180, 50, 255)
-    draw.rounded_rectangle([cam_x + 22, cam_y + cam_h - 48, cam_x + 237, cam_y + cam_h - 20], radius=8, fill=(15, 18, 28, 220), outline=b_col, width=1)
-    draw.ellipse([cam_x + 32, cam_y + cam_h - 38, cam_x + 42, cam_y + cam_h - 28], fill=b_col)
-    draw.text((cam_x + 49, cam_y + cam_h - 43), badge_str, font=FONT_LABEL, fill=b_col)
-
-    # 2. Left Column: YOUR ACTION CARD (Beside camera, never overlapping)
-    card_w = cam_x - 50
-    card_x1 = 30
-    card_y1 = cam_y
-    card_y2 = cam_y + cam_h
-
-    # Card Background Frame (Cyan Theme)
-    draw.rounded_rectangle([card_x1 - 2, card_y1 - 2, card_x1 + card_w + 2, card_y2 + 2], radius=18, fill=(0, 240, 255, 30))
-    draw.rounded_rectangle([card_x1, card_y1, card_x1 + card_w, card_y2], radius=16, fill=(15, 22, 34, 245), outline=(0, 220, 255, 255), width=2)
-
-    draw.text((card_x1 + card_w // 2, card_y1 + 35), "YOUR ACTION", font=FONT_CARD_TITLE, fill=(0, 220, 255, 255), anchor="mm")
-    draw.text((card_x1 + card_w // 2, card_y1 + 65), f"PLAYER: {session.player_name.upper()}", font=FONT_LABEL, fill=(160, 180, 210, 255), anchor="mm")
-
-    # Center Gesture Display Box
-    p_box_y1 = card_y1 + 100
-    p_box_y2 = card_y2 - 60
-    draw.rounded_rectangle([card_x1 + 20, p_box_y1, card_x1 + card_w - 20, p_box_y2], radius=14, fill=(22, 32, 50, 240), outline=(50, 75, 110, 255), width=1)
-
-    if session.state == STATE_SHOW_RESULT:
-        p_display = session.player_move if session.player_move else "NO MOVE"
-        p_display_col = (0, 255, 180, 255) if session.player_move else (255, 70, 70, 255)
-        p_status_msg = "FINAL MOVE"
-    else:
-        p_display = live_gesture if live_gesture else "WAITING"
-        p_display_col = (0, 220, 255, 255) if live_gesture else (120, 140, 170, 255)
-        p_status_msg = "TRACKING GESTURE"
-
-    draw.text((card_x1 + card_w // 2, (p_box_y1 + p_box_y2) // 2), p_display, font=FONT_CARD_MOVE, fill=p_display_col, anchor="mm")
-    draw.text((card_x1 + card_w // 2, card_y2 - 30), p_status_msg, font=FONT_LABEL_BOLD, fill=(180, 200, 230, 255), anchor="mm")
-
-    # 3. Right Column: AI OPPONENT CARD (Beside camera, never overlapping)
-    ai_card_x1 = cam_x + cam_w + 20
-    ai_card_w = w - ai_card_x1 - 30
-    ai_card_y1 = cam_y
-    ai_card_y2 = cam_y + cam_h
-
-    # Card Background Frame (Magenta Theme)
-    draw.rounded_rectangle([ai_card_x1 - 2, ai_card_y1 - 2, ai_card_x1 + ai_card_w + 2, ai_card_y2 + 2], radius=18, fill=(255, 60, 130, 30))
-    draw.rounded_rectangle([ai_card_x1, ai_card_y1, ai_card_x1 + ai_card_w, ai_card_y2], radius=16, fill=(32, 14, 26, 245), outline=(255, 60, 130, 255), width=2)
-
-    draw.text((ai_card_x1 + ai_card_w // 2, ai_card_y1 + 35), "AI OPPONENT", font=FONT_CARD_TITLE, fill=(255, 80, 140, 255), anchor="mm")
-    draw.text((ai_card_x1 + ai_card_w // 2, ai_card_y1 + 65), f"MARKOV AI ({session.engine.mode.upper()})", font=FONT_LABEL, fill=(220, 160, 190, 255), anchor="mm")
-
-    ai_box_y1 = ai_card_y1 + 100
-    ai_box_y2 = ai_card_y2 - 60
-    draw.rounded_rectangle([ai_card_x1 + 20, ai_box_y1, ai_card_x1 + ai_card_w - 20, ai_box_y2], radius=14, fill=(48, 20, 38, 240), outline=(110, 50, 85, 255), width=1)
-
-    if session.state == STATE_SHOW_RESULT:
-        ai_display = session.ai_move if session.ai_move else "NONE"
-        ai_display_col = (255, 100, 160, 255)
-        ai_status_msg = "COUNTER REVEALED"
-    elif session.state == STATE_COUNTDOWN:
-        ai_display = "DECIDING..."
-        ai_display_col = (255, 180, 80, 255)
-        ai_status_msg = "MOVE LOCKED"
-    else:
-        ai_display = "READY"
-        ai_display_col = (180, 140, 170, 255)
-        ai_status_msg = "AWAITING ROUND"
-
-    draw.text((ai_card_x1 + ai_card_w // 2, (ai_box_y1 + ai_box_y2) // 2), ai_display, font=FONT_CARD_MOVE, fill=ai_display_col, anchor="mm")
-    draw.text((ai_card_x1 + ai_card_w // 2, ai_card_y2 - 30), ai_status_msg, font=FONT_LABEL_BOLD, fill=(230, 180, 210, 255), anchor="mm")
-
-    # -------------------------------------------------------------
-    # C. CENTER COUNTDOWN / RESULT OVERLAYS
-    # -------------------------------------------------------------
+    if session.state == STATE_COUNTDOWN:
+        _pill(draw, cam_x + cam_w // 2, cam_y + 28, "SHOW GESTURE NOW!", FONT_LABEL_BOLD, (255, 255, 255, 255))
+    elif not view.hand_found:
+        _pill(draw, cam_x + cam_w // 2, cam_y + 28, "SHOW YOUR HAND", FONT_LABEL_BOLD, (255, 180, 50, 255))
     if session.state == STATE_IDLE:
-        prompt_w, prompt_h = 380, 80
-        px1 = cam_x + (cam_w - prompt_w) // 2
-        py1 = cam_y + (cam_h - prompt_h) // 2
+        _pill(draw, cam_x + cam_w // 2, cam_y + cam_h - 34, "ARE YOU READY?   Press [SPACE] to Start",
+              FONT_LABEL_BOLD, PLAYER_ACCENT, pad=22, height=40)
 
-        draw.rounded_rectangle([px1 - 3, py1 - 3, px1 + prompt_w + 3, py1 + prompt_h + 3], radius=18, fill=(0, 220, 255, 40))
-        draw.rounded_rectangle([px1, py1, px1 + prompt_w, py1 + prompt_h], radius=16, fill=(15, 18, 28, 235), outline=(0, 220, 255, 255), width=2)
-        
-        draw.text((px1 + prompt_w // 2, py1 + 24), "ARE YOU READY?", font=FONT_LABEL_BOLD, fill=(0, 220, 255, 255), anchor="mm")
-        draw.text((px1 + prompt_w // 2, py1 + 54), "Press [SPACE] to Start", font=FONT_TITLE, fill=(255, 255, 255, 255), anchor="mm")
+    _move_strip(overlay, draw, cam_x, lay["strip_y1"], cam_x + cam_w, lay["strip_y2"],
+                shown_move, PLAYER_ACCENT, (10, 45, 65, 235))
 
+    # 2. AI card
+    _card_frame(draw, ax1, card_y1, ax2, card_y2, AI_ACCENT, (255, 60, 130, 30), (32, 14, 26, 245))
+    draw.text((ax1 + 24, header_y), "AI OPPONENT", font=FONT_CARD_TITLE, fill=(255, 80, 140, 255), anchor="lm")
+    draw.text((ax2 - 24, header_y), f"MARKOV AI ({session.engine.mode.upper()})", font=FONT_LABEL,
+              fill=(220, 160, 190, 255), anchor="rm")
+
+    draw.rounded_rectangle([ai_panel_x, cam_y, ai_panel_x + cam_w, cam_y + cam_h], radius=14,
+                           fill=(40, 16, 34, 255), outline=(110, 50, 85, 255), width=2)
+    ai_cx = ai_panel_x + cam_w // 2
+    ai_cy = cam_y + cam_h // 2
+
+    if session.state == STATE_SHOW_RESULT and session.ai_move:
+        # The AI's hand hangs down from the top edge, facing the player
+        icon = gesture_icon(session.ai_move, cam_h - 8, upside_down=True)
+        if icon is not None:
+            overlay.alpha_composite(icon, (ai_cx - icon.width // 2, cam_y + 4))
+        else:
+            draw.text((ai_cx, ai_cy), session.ai_move, font=FONT_CARD_MOVE, fill=(255, 100, 160, 255), anchor="mm")
     elif session.state == STATE_COUNTDOWN:
+        # The dots are drawn after the word, with room kept for all three so the word never shifts
+        dots = "." * (int(current_time * 3) % 4)
+        word_w = draw.textlength("DECIDING", font=FONT_CARD_MOVE)
+        start_x = ai_cx - (word_w + draw.textlength("...", font=FONT_CARD_MOVE)) / 2
+        draw.text((start_x, ai_cy - 14), "DECIDING", font=FONT_CARD_MOVE, fill=(255, 180, 80, 255), anchor="lm")
+        draw.text((start_x + word_w + 2, ai_cy - 14), dots, font=FONT_CARD_MOVE, fill=(255, 180, 80, 255), anchor="lm")
+        draw.text((ai_cx, ai_cy + 28), "MOVE LOCKED", font=FONT_LABEL_BOLD, fill=(230, 180, 210, 255), anchor="mm")
+    else:
+        draw.text((ai_cx, ai_cy - 14), "READY", font=FONT_CARD_MOVE, fill=(180, 140, 170, 255), anchor="mm")
+        draw.text((ai_cx, ai_cy + 28), "AWAITING ROUND", font=FONT_LABEL_BOLD, fill=(230, 180, 210, 255), anchor="mm")
+
+    _move_strip(overlay, draw, ai_panel_x, lay["strip_y1"], ai_panel_x + cam_w, lay["strip_y2"],
+                session.ai_move if session.state == STATE_SHOW_RESULT else None, AI_ACCENT, (65, 15, 35, 235))
+
+    # -------------------------------------------------------------
+    # C. COUNTDOWN RING AND RESULT BANNER
+    # -------------------------------------------------------------
+    if session.state == STATE_COUNTDOWN:
         elapsed = current_time - session.state_start_time
         remaining = session.countdown_duration - elapsed
         progress = max(0.0, min(1.0, elapsed / session.countdown_duration))
 
-        c_cx = cam_x + cam_w // 2
-        # The ring replaces "VS" in the scoreboard bar, so it never covers the hand
+        # The ring replaces "VS" in the scoreboard bar
+        c_cx = w // 2
         c_cy = 71
 
         gauge_r = 34
         bbox = [c_cx - gauge_r, c_cy - gauge_r, c_cx + gauge_r, c_cy + gauge_r]
-        
+
         draw.ellipse(bbox, fill=(15, 17, 24, 255), outline=(40, 50, 70, 200), width=5)
         start_angle = -90
         end_angle = start_angle + (360 * (1.0 - progress))
@@ -339,11 +363,10 @@ def render_ui(session, w, h, current_time, live_gesture, view):
             color = (0, 255, 140, 255)
 
         draw.text((c_cx, c_cy), count_str, font=FONT_CARD_MOVE, fill=color, anchor="mm")
-        draw.text((c_cx, cam_y + 62), "SHOW GESTURE NOW!", font=FONT_LABEL_BOLD, fill=(255, 255, 255, 255), anchor="mm")
 
     elif session.state == STATE_SHOW_RESULT:
-        banner_w, banner_h = min(cam_w - 40, 480), 120
-        bx = cam_x + (cam_w - banner_w) // 2
+        banner_w, banner_h = 340, 104
+        bx = (w - banner_w) // 2
         by = cam_y + (cam_h - banner_h) // 2 - 10
 
         if session.round_result == "PLAYER":
@@ -374,11 +397,10 @@ def render_ui(session, w, h, current_time, live_gesture, view):
         draw.rounded_rectangle([bx - 3, by - 3, bx + banner_w + 3, by + banner_h + 3], radius=20, fill=banner_border)
         draw.rounded_rectangle([bx, by, bx + banner_w, by + banner_h], radius=18, fill=banner_bg)
 
-        draw.text((bx + banner_w // 2, by + 40), res_title, font=FONT_BANNER, fill=text_color, anchor="mm")
-        draw.text((bx + banner_w // 2, by + 85), res_sub, font=FONT_SUB_BANNER, fill=(220, 230, 240, 255), anchor="mm")
+        draw.text((bx + banner_w // 2, by + 36), res_title, font=FONT_BANNER, fill=text_color, anchor="mm")
+        draw.text((bx + banner_w // 2, by + 76), res_sub, font=FONT_SUB_BANNER, fill=(220, 230, 240, 255), anchor="mm")
 
-        prompt_next = "Press [SPACE] for Next Round"
-        draw.text((bx + banner_w // 2, by + banner_h + 30), prompt_next, font=FONT_LABEL_BOLD, fill=(0, 255, 220, 255), anchor="mm")
+        _pill(draw, w // 2, by + banner_h + 32, "Press [SPACE] for Next Round", FONT_LABEL_BOLD, (0, 255, 220, 255), pad=22, height=38)
 
     # -------------------------------------------------------------
     # D. BOTTOM CONTROLS DOCK (Sleek Glass Dock)

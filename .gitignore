@@ -21,3 +21,6 @@ Thumbs.db
 players_data.json
 players_data.json.tmp
 players_data.json.corrupt-*
+
+# Large source artwork; the cut-out icons live in assets/gestures
+rock-paper-scissors-banners-with-hand-gestures/

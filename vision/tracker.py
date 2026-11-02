@@ -1,4 +1,4 @@
-"""Camera and MediaPipe. Frames from here are only for detection and the viewport."""
+"""Camera and MediaPipe. Frames from here are only for detection and the player card."""
 import cv2
 import mediapipe as mp
 

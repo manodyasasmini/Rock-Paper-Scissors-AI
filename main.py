@@ -7,10 +7,10 @@ import cv2
 import config
 from game.session import ACTION_QUIT, ACTION_TOGGLE_FULLSCREEN, GameSession
 from game.store import PlayerStore
-from ui.screens import render_ui, viewport_size
+from ui.camera import render_camera
+from ui.screens import camera_size, render_ui
 from vision.gesture import GestureSmoother, detect_gesture
 from vision.tracker import CameraError, HandTracker
-from vision.viewport import HandViewport
 
 NO_KEY = 255
 
@@ -23,7 +23,6 @@ def main():
         return 1
 
     session = GameSession(PlayerStore(config.DATA_FILE))
-    viewport = HandViewport()
     smoother = GestureSmoother()
 
     cv2.namedWindow(config.WINDOW_NAME, cv2.WINDOW_NORMAL)
@@ -56,11 +55,9 @@ def main():
                 landmarks = tracker.find_hand(frame)
                 raw_gesture = detect_gesture(landmarks) if landmarks else None
                 live_gesture = smoother.update(raw_gesture)
-                view_w, view_h = viewport_size(width, height)
-                view = viewport.update(frame, landmarks, now, view_w, view_h)
+                view = render_camera(frame, landmarks, *camera_size(width, height))
             else:
                 smoother.clear()
-                viewport.reset()
 
             session.update(now, live_gesture)
             cv2.imshow(config.WINDOW_NAME, render_ui(session, width, height, now, live_gesture, view))

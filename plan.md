@@ -4,7 +4,7 @@
 
 **Approach:** keep the stack (Python, OpenCV, MediaPipe, NumPy, Pillow, JSON). Upgrade the structure, the hand viewport, the prediction engine and the visual design. Build the new version next to `rps_game.py`, so the current game keeps working until the new one is better.
 
-**Status:** plan only. Nothing has been implemented yet.
+**Status:** Phases 0-2 done. The hand-only viewport described in section 3 was built, then dropped after the first play-test: the camera now shows normally inside the player's card, next to the AI's card (see Phase 2 and section 5.4).
 
 ---
 
@@ -13,7 +13,7 @@
 1. **The hand and the AI's reasoning are the stars.** Everything else supports them.
 2. **Every number on screen is real.** The reference HUDs are full of decorative readouts. We take their look, but never show a number the program didn't measure.
 3. **Never reveal the AI's read before the throw.** See section 4.3.
-4. **No face on screen, and no video saved.** The current code has no `VideoWriter` or `imwrite` calls. The new version must keep it that way.
+4. **No video is saved.** The current code has no `VideoWriter` or `imwrite` calls. The new version must keep it that way. The live camera picture appears in the player's card only. A skeleton-only mode is still a planned option for venues that don't want faces shown.
 5. **A stranger can play without instructions.** No required typing, and the game shouldn't depend on keyboard shortcuts.
 
 ---
@@ -39,6 +39,8 @@ Found by reading `rps_game.py`. The redesign should fix each of these.
 ---
 
 ## 3. Vision: the hand-only viewport
+
+> **Dropped on 2026-11-02.** I built this (smoothed crop, mask, placement hints) and it was tested with the player. They found it looked bad and wanted the normal camera view. The code was removed. The gesture-reading points in 3.5 still apply. The privacy discussion in 3.3 is why a skeleton-only mode stays on the list.
 
 ### 3.1 Pipeline
 
@@ -182,33 +184,29 @@ These are **inspiration only**. All elements get drawn in code, so there are no 
 
 Save one reference set of 21 landmarks for each of Rock, Paper and Scissors, then draw the same skeleton style in the move cards: cyan for the player, magenta for the AI. This also replaces the emoji in `CHOICE_ICONS`, which aren't currently used on screen.
 
-### 5.4 Main screen (1920 × 1080 logical layout)
+### 5.4 Main screen (built)
+
+Two equal cards, Player and AI, under the scoreboard bar:
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│  YOU  ALEX              3   :   2             ROUND 6/15   STREAK 2      │
-│  ▮▮▮▮▮▯▯▯                                     W L W D W                  │
-├─────────────────┬──────────────────────────────────────┬─────────────────┤
-│  YOUR MOVE      │ ⌜ HAND TRACKING            ● ACTIVE ⌝│  AI MOVE        │
-│                 │                                      │                 │
-│   [ skeleton    │                                      │   [ skeleton    │
-│     icon ]      │            lit hand on               │     icon ]      │
-│                 │            dark field                │                 │
-│    SCISSORS     │          cyan 21-point               │   MOVE LOCKED   │
-│                 │            skeleton                  │                 │
-│  ─────────────  │                                      │  ─────────────  │
-│  STABILITY      │                                      │  AI'S READ      │
-│  ▮▮▮▮▮▮▮▯       │                                      │  ROCK     ▮▮▮▮  │
-│                 │                                      │  PAPER    ▮     │
-│  YOUR HABITS    │                               ┌────┐ │  SCISSORS ▮▮    │
-│  Repeats after  │                               │ ·  │ │  (after reveal) │
-│  a win: 3 of 4  │ ⌞ SCISSORS               radar└────┘⌟│  EVIDENCE: MED  │
-├─────────────────┴──────────────────────────────────────┴─────────────────┤
-│   "You repeated your move after a win, and the AI expected that."        │
+│ PLAYER: ALEX      [ YOU 3 ]  ( 2 )  [ AI 2 ]            STREAK  W L W D W │
+├────────────────────────────────────┬─────────────────────────────────────┤
+│ YOUR ACTION         ● DETECTED: …  │ AI OPPONENT          MARKOV AI (…)  │
+│ ┌────────────────────────────────┐ │ ┌─────────────────────────────────┐ │
+│ │      live camera picture       │ │ │   AI's hand hangs from the top  │ │
+│ │      + cyan hand skeleton      │ │ │   after the reveal; "DECIDING…" │ │
+│ │                                │ │ │   while the countdown runs      │ │
+│ └────────────────────────────────┘ │ └─────────────────────────────────┘ │
+│  [ rock ]  [ PAPER ]  [ scissors ] │  [ ROCK ]  [ paper ]  [ scissors ]  │
+├────────────────────────────────────┴─────────────────────────────────────┤
+│        [SPACE] Play   [P] Player   [F] Fullscreen   [D] AI   [R]   [Q]   │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-Column widths are about 22% / 50% / 22%, with the rest as margins and gaps. The keyboard legend moves off the main screen to an admin overlay on `[H]`.
+- The hand pictures are cut from the supplied banner artwork, with no text for the moves. The lit tile shows the player's detected (then final) move, and the AI's revealed move.
+- The countdown ring replaces "VS" in the scoreboard bar. The result banner sits between the two cards.
+- The Phase 3 redesign (colours, fonts, spacing, animation) and the Phase 5 prediction bars build on this layout.
 
 ### 5.5 Screens and flow
 
@@ -323,13 +321,14 @@ This estimates about 20 FPS for the current game, below the 24 FPS target. UI re
 
 **Changes from the old game, on purpose:** a profile is only saved once chosen, so nothing is written before a name is entered. The AI locks its move when the countdown starts. Closing the window quits. Labels fixed: "NEURAL BOT" is now "MARKOV AI", and "CALCULATING ODDS" is now "MOVE LOCKED".
 
-### Phase 2: Hand viewport
-- [x] Crop controller, hand mask, sharp skeleton, placeholder and radar. Edge and distance hints are text messages, not chevrons yet
-- [ ] Test with: rock-to-paper changes, fast movement, frame edges, hand leaving, hand in front of face, a second person in view, and different lighting and skin tones
+### Phase 2: Player vs AI cards (changed from "Hand viewport")
+- [x] Built the hand-only viewport (crop, mask, hints), then **removed it**: the player found it looked bad
+- [x] Camera picture inside the player's card, drawn at card size with the skeleton on top (`ui/camera.py`); a frame of a different shape is cropped around the centre, never stretched
+- [x] Gesture pictures replace the move names: three tiles in each card with the active move lit, and the AI's hand shown large on reveal (`ui/gestures.py`)
+- [x] Icons cut from the supplied artwork by `tools/make_gesture_icons.py`; falls back to text if the files are missing
+- [ ] Confirm by hand that it looks right on the real display, with a real hand in the camera
 
-**Done when:** no zoom pumping, and a face isn't recognisable in any tested position.
-
-**Tested so far:** automated tests on fake hands cover zoom staying the same across gestures, smooth following, ignoring small movements, hand near the frame edge, and the hand leaving. A test also confirms the viewport corners match the plain background when the camera frame is full of bright noise. Not yet tested: a real face behind the hand, a second person, different lighting and skin tones, rapid movement on a real webcam. These need you at the camera.
+**Done when:** the player says the screen looks right. Cutting the hands out of the artwork worked automatically using the white sticker outline, but I have only seen it on a stand-in camera picture, not your webcam.
 
 ### Phase 3: New interface
 - [ ] Theme, fonts, panels, new layout at any resolution, all screens
@@ -369,7 +368,7 @@ This estimates about 20 FPS for the current game, below the 24 FPS target. UI re
 
 | Risk | Mitigation |
 |---|---|
-| Hand mask looks rough or flickers | Tune feathering. Skeleton-only mode is the fallback |
+| Faces of visitors or bystanders show in the camera card | Skeleton-only mode as an option, and a privacy line on the attract screen |
 | Exhibition laptop can't hold 24 FPS | Test there in Phase 0. Lower internal resolution, background-thread tracking |
 | Venue lighting hurts tracking | Test on site early. Bring a lamp and a plain backdrop |
 | Visitors play too few rounds to show learning | Fast-learning experts first. Summary reports evidence honestly |
@@ -401,5 +400,5 @@ The notes' main advice stands: keep the stack, crop to the hand, use decay, and 
 2. **Win-stay/lose-shift moves up, second-order Markov moves down.** With 10-20 rounds per visitor, the 9-cell model learns far sooner than the 27-cell one (section 4.1).
 3. **Experts are weighted by results instead of using a fallback chain.** This is more robust, and tells the UI which pattern to credit (section 4.2).
 4. **Crop size comes from palm size, not the bounding box.** This avoids zoom pumping when gestures change (section 3.2).
-5. **Cropping is backed by a hand mask.** A crop alone can still show a face behind the hand (section 3.3).
+5. **Cropping is backed by a hand mask.** A crop alone can still show a face behind the hand (section 3.3). *(Later dropped: see Phase 2.)*
 6. **Structure comes before the UI redesign, with a smaller folder tree.** Otherwise the new UI is built on the same global state, then has to be rewritten (section 6).
