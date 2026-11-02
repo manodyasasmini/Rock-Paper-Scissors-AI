@@ -20,21 +20,21 @@
   <rect x="10" y="250" width="230" height="70" rx="16" fill="#ffffff" stroke="#1c1c1c" stroke-width="2.8"/>
   <rect x="290" y="250" width="230" height="70" rx="16" fill="#ffffff" stroke="#1c1c1c" stroke-width="2.8" stroke-dasharray="9 6"/>
   <rect x="570" y="250" width="230" height="70" rx="16" fill="#ffffff" stroke="#1c1c1c" stroke-width="2.8" stroke-dasharray="9 6"/>
-  <text x="125" y="45" text-anchor="middle" dominant-baseline="central" font-size="21" font-weight="600" fill="#1c1c1c">Webcam</text>
-  <text x="405" y="33" text-anchor="middle" dominant-baseline="central" font-size="21" font-weight="600" fill="#1c1c1c">OpenCV</text>
-  <text x="405" y="60" text-anchor="middle" dominant-baseline="central" font-size="15.5" fill="#444444">capture and mirror</text>
-  <text x="685" y="33" text-anchor="middle" dominant-baseline="central" font-size="21" font-weight="600" fill="#1c1c1c">MediaPipe Hands</text>
-  <text x="685" y="60" text-anchor="middle" dominant-baseline="central" font-size="15.5" fill="#444444">21 landmarks</text>
-  <text x="125" y="153" text-anchor="middle" dominant-baseline="central" font-size="21" font-weight="600" fill="#1c1c1c">Display</text>
-  <text x="125" y="180" text-anchor="middle" dominant-baseline="central" font-size="15.5" fill="#444444">OpenCV + Pillow</text>
-  <text x="405" y="153" text-anchor="middle" dominant-baseline="central" font-size="21" font-weight="600" fill="#1c1c1c">Game state machine</text>
-  <text x="405" y="180" text-anchor="middle" dominant-baseline="central" font-size="15.5" fill="#444444">ready, countdown, reveal</text>
-  <text x="685" y="153" text-anchor="middle" dominant-baseline="central" font-size="21" font-weight="600" fill="#1c1c1c">Gesture classifier</text>
-  <text x="685" y="180" text-anchor="middle" dominant-baseline="central" font-size="15.5" fill="#444444">rock / paper / scissors</text>
-  <text x="125" y="273" text-anchor="middle" dominant-baseline="central" font-size="21" font-weight="600" fill="#1c1c1c">Players &amp; board</text>
-  <text x="125" y="300" text-anchor="middle" dominant-baseline="central" font-size="15.5" fill="#444444">JSON file</text>
-  <text x="405" y="273" text-anchor="middle" dominant-baseline="central" font-size="21" font-weight="600" fill="#1c1c1c">Adaptive AI</text>
-  <text x="405" y="300" text-anchor="middle" dominant-baseline="central" font-size="15.5" fill="#444444">four predictors</text>
-  <text x="685" y="273" text-anchor="middle" dominant-baseline="central" font-size="21" font-weight="600" fill="#1c1c1c">Match report</text>
-  <text x="685" y="300" text-anchor="middle" dominant-baseline="central" font-size="15.5" fill="#444444">what it learned</text>
+  <text x="125" y="45" text-anchor="middle" dominant-baseline="central" font-size="18.5" font-weight="600" fill="#1c1c1c">Webcam</text>
+  <text x="405" y="33" text-anchor="middle" dominant-baseline="central" font-size="18.5" font-weight="600" fill="#1c1c1c">OpenCV</text>
+  <text x="405" y="60" text-anchor="middle" dominant-baseline="central" font-size="14.5" fill="#444444">capture and mirror</text>
+  <text x="685" y="33" text-anchor="middle" dominant-baseline="central" font-size="18.5" font-weight="600" fill="#1c1c1c">MediaPipe Hands</text>
+  <text x="685" y="60" text-anchor="middle" dominant-baseline="central" font-size="14.5" fill="#444444">21 landmarks</text>
+  <text x="125" y="153" text-anchor="middle" dominant-baseline="central" font-size="18.5" font-weight="600" fill="#1c1c1c">Display</text>
+  <text x="125" y="180" text-anchor="middle" dominant-baseline="central" font-size="14.5" fill="#444444">OpenCV + Pillow</text>
+  <text x="405" y="153" text-anchor="middle" dominant-baseline="central" font-size="18.5" font-weight="600" fill="#1c1c1c">Game state machine</text>
+  <text x="405" y="180" text-anchor="middle" dominant-baseline="central" font-size="14.5" fill="#444444">ready, countdown, reveal</text>
+  <text x="685" y="153" text-anchor="middle" dominant-baseline="central" font-size="18.5" font-weight="600" fill="#1c1c1c">Gesture classifier</text>
+  <text x="685" y="180" text-anchor="middle" dominant-baseline="central" font-size="14.5" fill="#444444">rock / paper / scissors</text>
+  <text x="125" y="273" text-anchor="middle" dominant-baseline="central" font-size="18.5" font-weight="600" fill="#1c1c1c">Players &amp; board</text>
+  <text x="125" y="300" text-anchor="middle" dominant-baseline="central" font-size="14.5" fill="#444444">JSON file</text>
+  <text x="405" y="273" text-anchor="middle" dominant-baseline="central" font-size="18.5" font-weight="600" fill="#1c1c1c">Adaptive AI</text>
+  <text x="405" y="300" text-anchor="middle" dominant-baseline="central" font-size="14.5" fill="#444444">four predictors</text>
+  <text x="685" y="273" text-anchor="middle" dominant-baseline="central" font-size="18.5" font-weight="600" fill="#1c1c1c">Match report</text>
+  <text x="685" y="300" text-anchor="middle" dominant-baseline="central" font-size="14.5" fill="#444444">what it learned</text>
 </svg>
