@@ -277,7 +277,7 @@ function scrStart(){
   let h = T(390,96,`ROCK PAPER SCISSORS <span style="color:${K.p}">AI</span>`,{s:44,b:1,c:K.ink,al:"c"});
   h += T(390,142,"An AI that learns your habits. Can you beat it?",{s:19,c:K.muted,al:"c"});
   [["ROCK",215,-5,0],["PAPER",390,0,.5],["SCISSORS",565,5,1]].forEach(([m,cx,rot,d])=>{
-    h += `<div class="a float" style="left:${cx-78}px;top:196px;width:156px;height:200px;animation-delay:${d}s"><div style="position:absolute;inset:0;border-radius:22px;overflow:hidden;background:${GRAD[m]};box-shadow:0 14px 30px rgba(30,20,70,.26);transform:rotate(${rot}deg)">${img(m,184,"position:absolute;left:50%;bottom:-6px;transform:translateX(-50%)")}</div></div>`;
+    h += `<div class="a float" style="left:${cx-78}px;top:196px;width:156px;height:200px;animation-delay:${d}s"><div style="position:absolute;inset:0;border-radius:22px;overflow:hidden;background:${GRAD[m]};box-shadow:0 14px 30px rgba(30,20,70,.26);transform:rotate(${rot}deg)">${img(m,m==="ROCK"?164:184,"position:absolute;left:50%;bottom:-6px;transform:translateX(-50%)")}</div></div>`;
   });
   h += T(390,462,`PRESS ${kc("SPACE")} TO PLAY`,{s:26,b:1,c:"#fff",al:"c",st:`background:${K.p};border-radius:40px;padding:14px 38px;box-shadow:0 10px 26px rgba(37,99,235,.38)`}).replace('class="a t"','class="a t pulse"');
   h += T(390,512,"Beat the AI to climb the leaderboard",{s:15,c:K.muted,al:"c"});
