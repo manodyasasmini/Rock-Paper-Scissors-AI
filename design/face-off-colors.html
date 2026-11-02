@@ -187,7 +187,7 @@ document.getElementById("cu-p").oninput=e=>{ S.p=e.target.value; render(); };
 document.getElementById("cu-a").oninput=e=>{ S.a=e.target.value; render(); };
 document.getElementById("res").onclick=e=>{ const b=e.target.closest("button"); if(b){ S.r=b.dataset.v; render(); } };
 document.getElementById("reset").onclick=()=>{ S=Object.assign({},DEF); render(); };
-document.getElementById("copy").onclick=()=>{ document.getElementById("out").value=`My colour settings\nYour colour: ${S.p}\nAI colour: ${S.a}\nBehind the AI's hand: ${HANDS[S.h][0]}\nWin and loss colours: ${S.g==="gr"?"green / red":"your / AI colours"}\nScreen style: ${MODES[S.m][0]}`; document.getElementById("dlg").showModal(); };
+document.getElementById("copy").onclick=()=>{ document.getElementById("out").value=`My colour settings\nYour colour: ${S.p}\nAI colour: ${S.a}\nBehind the AI's hand: ${HANDS[S.h][0]}\nScreen style: ${MODES[S.m][0]}`; document.getElementById("dlg").showModal(); };
 document.getElementById("cl").onclick=()=>document.getElementById("dlg").close();
 document.getElementById("cp").onclick=()=>{ const o=document.getElementById("out"); o.select(); try{ document.execCommand("copy"); }catch(e){} };
 function fit(){ const w=document.getElementById("sw"); document.getElementById("stage").style.transform=`scale(${w.clientWidth/1280})`; }
