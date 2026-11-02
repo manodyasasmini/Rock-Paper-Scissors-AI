@@ -389,13 +389,13 @@ def _match(session, L, now, live_gesture, view):
     hand = view is not None and view.hand_found
     if revealed:
         if valid:
-            _chip(c, 452, head, f"Final: {session.player_move}", theme.GREEN_D, theme.GREEN_T)
+            _chip(c, 452, head, f"Final: {session.player_move}", theme.PLAYER_D, theme.PLAYER_T)
         else:
             _chip(c, 452, head, "No hand seen", theme.AMBER_D, theme.AMBER_T)
     elif live_gesture:
-        _chip(c, 452, head, f"{live_gesture.capitalize()} detected", theme.GREEN_D, theme.GREEN_T)
+        _chip(c, 452, head, f"{live_gesture.capitalize()} detected", theme.PLAYER_D, theme.PLAYER_T)
     elif hand:
-        _chip(c, 452, head, "Hand detected", theme.GREEN_D, theme.GREEN_T)
+        _chip(c, 452, head, "Hand detected", theme.PLAYER_D, theme.PLAYER_T)
     else:
         _chip(c, 452, head, "Looking for your hand", theme.AMBER_D, theme.AMBER_T)
 
@@ -481,7 +481,7 @@ def _middle(c, session, now, valid):
             c.pie(640, cy, 76, -90, -90 + 360 * progress, theme.PLAYER)
         c.circle(640, cy, 67, fill=theme.CARD)
         number = "3" if remaining > 2 else "2" if remaining > 1 else "1" if remaining > 0 else "GO"
-        c.text(640, cy + 4, number, 90 if number != "GO" else 60, theme.PLAYER, True, "mm")
+        c.glyph_text(640, cy, number, 90 if number != "GO" else 60, theme.PLAYER, True)
         beat = 0 if remaining > 2 else 1 if remaining > 1 else 2 if remaining > 0 else 3
         words = ["ROCK", "PAPER", "SCISSORS", "SHOOT!"]
         chant = []
@@ -511,7 +511,7 @@ def _middle(c, session, now, valid):
         c.circle(640, t + 274, 50, fill=theme.AMBER_T)
         for k in range(18):
             c.arc(640, t + 274, 49, k * 20, k * 20 + 11, theme.AMBER, 3)
-        c.text(640, t + 276, "?", 46, theme.AMBER_D, True, "mm")
+        c.glyph_text(640, t + 274, "?", 46, theme.AMBER_D, True)
         c.wrapped(520, t + 346, "No gesture was seen, so this round doesn't count. Go again!", 14, theme.MUTED, 240, 19, align="c")
     else:
         c.text(640, t + 204, "GET READY", 28, theme.INK, True, "mm")

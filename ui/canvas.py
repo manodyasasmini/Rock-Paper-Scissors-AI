@@ -188,6 +188,12 @@ class Canvas:
     def text(self, x, y, text, size, fill, bold=False, anchor="lm"):
         self.d.text((self.L.x(x), self.L.y(y)), text, font=self.font(size, bold), fill=fill, anchor=anchor)
 
+    def glyph_text(self, x, y, text, size, fill, bold=False):
+        """Text whose letters (not the line around them) are centred on (x, y), for big numbers."""
+        font = self.font(size, bold)
+        left, top, right, bottom = font.getbbox(text, anchor="ls")
+        self.d.text((self.L.x(x) - (left + right) / 2, self.L.y(y) - (top + bottom) / 2), text, font=font, fill=fill, anchor="ls")
+
     def spaced(self, x, y, text, size, fill, bold=True, spacing=3, anchor="mm"):
         """Text with extra space between the letters, for small caps labels."""
         font = self.font(size, bold)
