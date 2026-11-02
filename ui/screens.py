@@ -771,18 +771,18 @@ def _admin_overlay(c, session):
         ("Sound", "Countdown ticks and result jingles", ["On", "Off"], "On" if s.sound else "Off"),
     ]
     for i, (label, hint, options, current) in enumerate(rows):
-        y = 138 + i * 78
-        _keycap(c, 780, y + 10, str(i + 1))
-        c.text(820, y + 10, label, 18, theme.INK, True)
-        c.text(780, y + 34, hint, 13, theme.MUTED)
+        y = 130 + i * 80
+        _keycap(c, 780, y + 8, str(i + 1))
+        c.text(820, y + 8, label, 18, theme.INK, True)
+        c.text(780, y + 31, hint, 13, theme.MUTED)
         for k, option in enumerate(options):
             x, on = 780 + k * 102, option == current
-            c.rect(x, y + 52, 96, 34, fill=theme.PLAYER if on else theme.KEY_LINE, radius=9)
+            c.rect(x, y + 43, 96, 30, fill=theme.PLAYER if on else theme.KEY_LINE, radius=9)
             if not on:
-                c.rect(x + 1, y + 53, 94, 32, fill=theme.WHITE, radius=8)
-            c.text(x + 48, y + 69, option, 14, theme.WHITE if on else theme.INK2, True, "mm")
-    c.text(780, 628, "Press 1 to 6 to change a setting. Saved straight away.", 14, theme.MUTED)
-    c.text(780, 654, "Press Q to quit the game.", 14, theme.INK2, True)
+                c.rect(x + 1, y + 44, 94, 28, fill=theme.WHITE, radius=8)
+            c.text(x + 48, y + 58, option, 14, theme.WHITE if on else theme.INK2, True, "mm")
+    c.text(780, 626, "Press 1 to 6 to change a setting. Saved straight away.", 14, theme.MUTED)
+    c.text(780, 652, "Press Q to quit the game.", 14, theme.INK2, True)
 
 
 def render_camera_problem(w, h, now, retry_in, hint="Ctrl+A, then Q to quit"):
