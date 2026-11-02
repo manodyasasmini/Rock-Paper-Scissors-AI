@@ -70,7 +70,12 @@ def explain(prediction, player_move):
     percent = round(prediction.probs[prediction.expected] * 100)
     early = ", an early guess" if prediction.evidence == "LOW" else ""
     why = f" because {prediction.reason}" if prediction.reason else " from a mix of your habits"
-    sentence = f"The AI expected {prediction.expected} ({percent}%{early}){why}, so it played {prediction.ai_move}."
+    counter = COUNTERS[prediction.expected]
+    if prediction.ai_move == counter:
+        played = f", so it played {counter}"
+    else:
+        played = f", so it leaned towards {counter} but played {prediction.ai_move} to stay unpredictable"
+    sentence = f"The AI expected {prediction.expected} ({percent}%{early}){why}{played}."
     if player_move == prediction.expected:
         return sentence + " You threw it."
     sentence += f" But you threw {player_move}."

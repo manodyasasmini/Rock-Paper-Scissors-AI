@@ -228,3 +228,12 @@ def test_with_no_standout_move_the_ai_only_guesses_and_says_so():
 def test_a_clear_expectation_also_says_what_the_ai_played():
     sentence = explain(pattern_engine().lock_move(), "ROCK")
     assert "so it played" in sentence
+
+
+def test_when_the_ai_does_not_play_the_counter_the_sentence_says_why():
+    prediction = pattern_engine().lock_move()
+    prediction.ai_move = prediction.expected          # playing the expected move itself is never the counter
+    sentence = explain(prediction, "ROCK")
+    assert "leaned towards" in sentence and "to stay unpredictable" in sentence
+    prediction.ai_move = COUNTERS[prediction.expected]
+    assert "so it played" in explain(prediction, "ROCK")
