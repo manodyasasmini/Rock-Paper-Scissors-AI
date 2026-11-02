@@ -314,17 +314,22 @@ Each phase ends with something runnable.
 This estimates about 20 FPS for the current game, below the 24 FPS target. UI rendering costs more than hand tracking, and a 1080p canvas would make it worse, so the rendering work in section 6 is required. Timings with a hand in view still need measuring.
 
 ### Phase 1: Structure
-- [ ] Create the modules and move logic over with the same behaviour
-- [ ] Add tests for winner logic, gesture classification and save/load
-- [ ] Add the engine interface, backed by the existing Markov logic
+- [x] Create the modules and move logic over with the same behaviour (`config`, `vision/`, `ai/`, `game/`, `ui/`; `ui/screens.py` is the old screen code, ported as-is)
+- [x] Add tests for winner logic, gesture classification and save/load (50 tests, no camera needed)
+- [x] Add the engine interface, backed by the existing Markov logic
+- [ ] Confirm by hand that `python main.py` plays like `rps_game.py`
 
 **Done when:** `main.py` plays the same game as `rps_game.py`, and tests run with no camera.
 
+**Changes from the old game, on purpose:** a profile is only saved once chosen, so nothing is written before a name is entered. The AI locks its move when the countdown starts. Closing the window quits. Labels fixed: "NEURAL BOT" is now "MARKOV AI", and "CALCULATING ODDS" is now "MOVE LOCKED".
+
 ### Phase 2: Hand viewport
-- [ ] Crop controller, hand mask, sharp skeleton, placeholder, radar and chevrons
+- [x] Crop controller, hand mask, sharp skeleton, placeholder and radar. Edge and distance hints are text messages, not chevrons yet
 - [ ] Test with: rock-to-paper changes, fast movement, frame edges, hand leaving, hand in front of face, a second person in view, and different lighting and skin tones
 
 **Done when:** no zoom pumping, and a face isn't recognisable in any tested position.
+
+**Tested so far:** automated tests on fake hands cover zoom staying the same across gestures, smooth following, ignoring small movements, hand near the frame edge, and the hand leaving. A test also confirms the viewport corners match the plain background when the camera frame is full of bright noise. Not yet tested: a real face behind the hand, a second person, different lighting and skin tones, rapid movement on a real webcam. These need you at the camera.
 
 ### Phase 3: New interface
 - [ ] Theme, fonts, panels, new layout at any resolution, all screens
