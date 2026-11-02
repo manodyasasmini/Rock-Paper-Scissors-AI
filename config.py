@@ -16,14 +16,14 @@ MIN_TRACKING_CONFIDENCE = 0.6
 # Rounds
 COUNTDOWN_SECONDS = 3.0
 MATCH_HISTORY_LENGTH = 6
-NAME_MAX_LENGTH = 14
+NAME_MAX_LENGTH = 12
 
 # Gesture smoothing: the move is the most common gesture over the last few frames
 GESTURE_WINDOW = 10
 GESTURE_MIN_VOTES = 6
 
 # Hand skeleton colours (BGR, since the camera picture is drawn with OpenCV)
-VIEW_PLAYER = (255, 229, 0)    # #00E5FF
+VIEW_PLAYER = (136, 148, 13)    # teal #0D9488
 VIEW_NODE = (255, 255, 255)
 
 # AI engine. Tuned with `python -m ai.simulate` against scripted players; re-tune after real play-tests.
@@ -43,3 +43,16 @@ MATCH_ROUNDS = 15
 # Learn mode shows what the AI expected after every round. Off by default, because it tells the player
 # which habit to break. The summary after a match always shows what the AI learned. `H` toggles it.
 LEARN_MODE_DEFAULT = False
+
+# Start of a match: hold a hand still this long (seconds) and the round begins by itself
+HOLD_TO_START_SECONDS = 2.0
+
+# Walking away: after this long without a hand or key, ask "Still there?", then return to the start screen
+IDLE_SECONDS = 20
+IDLE_WARNING_SECONDS = 8
+
+# Settings the operator can change with Ctrl+A. Saved here so they survive a restart.
+SETTINGS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "settings.json")
+MATCH_ROUND_CHOICES = [10, 15, 20, 0]      # 0 = no limit
+IDLE_SECOND_CHOICES = [10, 20, 30]
+LEADERBOARD_SIZE = 8

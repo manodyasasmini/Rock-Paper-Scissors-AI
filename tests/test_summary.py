@@ -88,3 +88,17 @@ def test_no_habits_gives_one_friendly_line_and_the_summary_carries_the_list():
     assert find_habits(moves("ROCK", "PAPER", "SCISSORS")) == [NO_HABIT]
     summary = summarize(moves("ROCK", "PAPER") * 4)
     assert summary.habits and summary.habit == summary.habits[0]
+
+
+def test_titles_follow_how_readable_the_player_was():
+    from game.summary import MatchSummary, title_index
+
+    def with_accuracy(percent, predicted=10):
+        return MatchSummary(15, 5, 5, 5, "DRAW", predicted, round(predicted * percent / 100), percent / 100)
+
+    assert title_index(with_accuracy(20)) == 0      # Mastermind
+    assert title_index(with_accuracy(35)) == 0
+    assert title_index(with_accuracy(40)) == 1      # Hard to read
+    assert title_index(with_accuracy(60)) == 2      # Creature of habit
+    assert title_index(with_accuracy(90)) == 3      # Open book
+    assert title_index(with_accuracy(90, predicted=2)) is None   # too little to judge

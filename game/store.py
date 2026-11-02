@@ -24,11 +24,22 @@ class PlayerStore:
                 pass
             return {}
 
-    def save_player(self, name, record):
-        data = self.load_all()
-        data[name] = {**record, "last_played": time.strftime("%Y-%m-%d %H:%M:%S")}
+    def _write(self, data):
         # Write to a temp file then swap it in, so a crash mid-write can't corrupt the data
         tmp_file = self.path + ".tmp"
         with open(tmp_file, "w") as f:
             json.dump(data, f, indent=4)
         os.replace(tmp_file, self.path)
+
+    def save_player(self, name, record):
+        """Merge `record` into the player's profile, so fields it doesn't mention (like best_match) are kept."""
+        data = self.load_all()
+        data[name] = {**data.get(name, {}), **record, "last_played": time.strftime("%Y-%m-%d %H:%M:%S")}
+        self._write(data)
+
+    def clear_best_matches(self):
+        """Wipe the leaderboard. Profiles, and what the AI learned about each player, stay."""
+        data = self.load_all()
+        for profile in data.values():
+            profile.pop("best_match", None)
+        self._write(data)

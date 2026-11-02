@@ -1,554 +1,769 @@
-"""Screens, drawn with Pillow. The player's card holds the live camera; the AI's card holds its hand."""
+"""Every screen, drawn with Pillow on a 1280 x 720 design that is scaled to the camera frame size.
+
+You are on the left (teal), the AI is on the right (red), and the match happens in the middle.
+"""
+import math
+
 import cv2
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image
 
 import config
 from ai.engine import CHOICES
-from game.session import (STATE_COUNTDOWN, STATE_IDLE, STATE_NAME_INPUT,
-                          STATE_SESSION_CHOICE, STATE_SHOW_RESULT, STATE_SUMMARY)
+from game.session import (STATE_CAMERA_CHECK, STATE_COUNTDOWN, STATE_IDLE, STATE_NAME_INPUT, STATE_REPLAY,
+                          STATE_SHOW_RESULT, STATE_START, STATE_SUMMARY)
+from game.summary import TITLES, title_index
+from ui import theme
+from ui.canvas import Canvas, Layout, draw_card, make_background
 from ui.gestures import gesture_icon
-from ui.theme import (FONT_BANNER, FONT_CARD_MOVE, FONT_CARD_TITLE, FONT_HISTORY, FONT_INPUT,
-                      FONT_LABEL, FONT_LABEL_BOLD, FONT_MODAL_TITLE, FONT_SCORE,
-                      FONT_SUB_BANNER, FONT_TITLE)
 
-CARD_MARGIN = 30
-CARD_GAP = 20
-CARD_HEADER = 54
-ARENA_TOP = 140
-ARENA_BOTTOM_MARGIN = 85
-STRIP_MIN_HEIGHT = 80
+CREDIT = "Created by SMS Abeyrathne · 235501H · BSc (Hons) Artificial Intelligence"
 
-PLAYER_ACCENT = (0, 220, 255, 255)
-AI_ACCENT = (255, 60, 130, 255)
+# Where things sit in the design (1280 x 720)
+MATCH_CAM = (44, 86, 408, 382)
+CHECK_CAM = (60, 156, 640, 440)
+
+_backgrounds = {}
+_static = {}
+_layouts = {}
 
 
-def arena_layout(w, h):
-    """Where the two cards, the camera panel and the move strips go on a canvas of this size."""
-    card_w = (w - 2 * CARD_MARGIN - CARD_GAP) // 2
-    card_y1 = ARENA_TOP
-    card_y2 = h - ARENA_BOTTOM_MARGIN
-    panel_w = card_w - 40
-    panel_h = min(panel_w * 9 // 16, card_y2 - card_y1 - CARD_HEADER - 10 - 14 - STRIP_MIN_HEIGHT)
-    panel_y1 = card_y1 + CARD_HEADER
-    return {
-        "card_w": card_w, "card_y1": card_y1, "card_y2": card_y2,
-        "player_x1": CARD_MARGIN, "ai_x1": CARD_MARGIN + card_w + CARD_GAP,
-        "panel_w": panel_w, "panel_h": panel_h, "panel_y1": panel_y1,
-        "strip_y1": panel_y1 + panel_h + 10, "strip_y2": card_y2 - 14,
-    }
+def _layout(w, h):
+    if (w, h) not in _layouts:
+        _layouts[(w, h)] = Layout(w, h)
+    return _layouts[(w, h)]
 
 
-def camera_size(w, h):
-    """Size the camera picture has to be for a canvas of this size."""
-    layout = arena_layout(w, h)
-    return layout["panel_w"], layout["panel_h"]
+def camera_size(state, w, h):
+    """Size the camera picture has to be for this screen and frame size."""
+    x, y, pw, ph = CHECK_CAM if state == STATE_CAMERA_CHECK else MATCH_CAM
+    x1, y1, x2, y2 = _layout(w, h).box(x, y, pw, ph)
+    return x2 - x1, y2 - y1
 
 
-EVIDENCE_COLORS = {"LOW": (255, 180, 50, 255), "MEDIUM": (0, 220, 255, 255), "HIGH": (0, 255, 150, 255)}
+def _begin(L, key, build=None):
+    """A canvas on a copy of the background, plus anything `build` drew once (cards and their shadows)."""
+    cache_key = (L.w, L.h, key)
+    if cache_key not in _static:
+        if (L.w, L.h) not in _backgrounds:
+            _backgrounds[(L.w, L.h)] = make_background(L)
+        image = _backgrounds[(L.w, L.h)].copy()
+        if build:
+            build(Canvas(image, L))
+        _static[cache_key] = image
+    return Canvas(_static[cache_key].copy(), L)
 
 
-def _wrap(draw, text, font, width):
-    lines, line = [], ""
-    for word in text.split():
-        trial = f"{line} {word}".strip()
-        if draw.textlength(trial, font=font) <= width or not line:
-            line = trial
-        else:
-            lines.append(line)
-            line = word
-    return lines + ([line] if line else [])
+def _bgr(canvas):
+    return cv2.cvtColor(np.asarray(canvas.img), cv2.COLOR_RGB2BGR)
 
 
-def _draw_ai_read(draw, session, x, y, width):
-    """What the AI expected the player to throw, with chance marked, and why. Only shown after the reveal."""
-    prediction = session.prediction
-    draw.text((x, y + 26), "AI EXPECTED YOU TO THROW", font=FONT_LABEL_BOLD, fill=(255, 120, 170, 255), anchor="lm")
-    if prediction.expected is None:
-        draw.text((x, y + 70), "NO PATTERN YET", font=FONT_CARD_TITLE, fill=(180, 140, 170, 255), anchor="lm")
-        evidence_y = y + 112
-        text_y = y + 140
+# ---------------------------------------------------------------- small parts
+def _keycap(c, x, cy, label, size=13, fill=theme.CARD):
+    """A keyboard key with its label, left edge at x. Returns the right edge."""
+    w = max(26, c.tw(label, size, True) + 16)
+    c.rect(x, cy - 12, w, 24, fill=theme.KEY_LINE, radius=8)
+    c.rect(x, cy - 12, w, 21, fill=fill, radius=8)
+    c.text(x + w / 2, cy - 1, label, size, theme.INK, True, "mm")
+    return x + w
+
+
+def _hints(c, items, y=678):
+    widths = [max(26, c.tw(k, 13, True) + 16) + 6 + c.tw(label, 15) for k, label in items]
+    x = 640 - (sum(widths) + 26 * (len(items) - 1)) / 2
+    for (key, label), width in zip(items, widths):
+        edge = _keycap(c, x, y, key)
+        c.text(edge + 6, y, label, 15, theme.MUTED)
+        x += width + 26
+
+
+def _chip(c, right, cy, text, fg, bg, dot=True):
+    width = c.tw(text, 14, True) + 26 + (16 if dot else 0)
+    x = right - width
+    c.rect(x, cy - 15, width, 30, fill=bg, radius=15)
+    if dot:
+        c.circle(x + 18, cy, 4.5, fill=fg)
+    c.text(x + (30 if dot else 13), cy, text, 14, fg, True)
+
+
+def _pill(c, cx, cy, text, colour, size=15):
+    width = c.tw(text, size, True) + 32
+    c.rect(cx - width / 2 - 1, cy - 17, width + 2, 34, fill=colour, radius=17)
+    c.rect(cx - width / 2, cy - 16, width, 32, fill=theme.WHITE, radius=16)
+    c.text(cx, cy, text, size, colour, True, "mm")
+
+
+def _tile(c, x, y, w, h, move, side, lit, dim=False, hanging=False):
+    """A dark tile with a hand picture. `lit` tiles get a coloured border; the rest are faded."""
+    accent, fill = (theme.PLAYER, theme.TILE_PLAYER) if side == "p" else (theme.AI, theme.TILE_AI)
+    if lit:
+        c.rect(x, y, w, h, fill=accent, radius=14)
+        c.rect(x + 3, y + 3, w - 6, h - 6, fill=fill, radius=11)
     else:
-        bar_x = x + 92
-        bar_w = width - 92 - 50
-        for i, move in enumerate(CHOICES):
-            row_y = y + 62 + i * 38
-            probability = prediction.probs[move]
-            thrown = move == session.player_move
-            draw.text((x, row_y), move, font=FONT_LABEL_BOLD, fill=PLAYER_ACCENT if thrown else (225, 215, 235, 255), anchor="lm")
-            draw.rounded_rectangle([bar_x, row_y - 8, bar_x + bar_w, row_y + 8], radius=6, fill=(30, 18, 32, 255),
-                                   outline=PLAYER_ACCENT if thrown else None, width=2)
-            draw.rounded_rectangle([bar_x, row_y - 8, bar_x + max(12, int(bar_w * probability)), row_y + 8], radius=6,
-                                   fill=(255, 70, 140, 255) if move == prediction.expected else (150, 60, 100, 255))
-            chance_x = bar_x + bar_w // 3
-            draw.line([(chance_x, row_y - 12), (chance_x, row_y + 12)], fill=(255, 255, 255, 210), width=1)
-            draw.text((bar_x + bar_w + 10, row_y), f"{round(probability * 100)}%", font=FONT_LABEL, fill=(235, 225, 240, 255), anchor="lm")
-        evidence_y = y + 172
-        text_y = y + 198
-        draw.text((x + width, evidence_y), "white tick = chance", font=FONT_HISTORY, fill=(150, 140, 165, 255), anchor="rm")
-    draw.text((x, evidence_y), f"EVIDENCE: {prediction.evidence}", font=FONT_LABEL_BOLD,
-              fill=EVIDENCE_COLORS[prediction.evidence], anchor="lm")
-    for j, line in enumerate(_wrap(draw, session.explanation, FONT_LABEL, width)[:5]):
-        draw.text((x, text_y + j * 21), line, font=FONT_LABEL, fill=(235, 220, 235, 255))
-
-
-def _draw_summary(draw, session, w, h):
-    """The end-of-match screen: the score, how well the AI read the player, and the habit it found."""
-    summary = session.summary
-    draw.text((w // 2, 50), "ROCK PAPER SCISSORS AI", font=FONT_BANNER, fill=(35, 55, 90, 180), anchor="mm")
-    modal_w, modal_h = 780, 560
-    mx1, my1 = (w - modal_w) // 2, (h - modal_h) // 2 + 16
-    mx2, my2 = mx1 + modal_w, my1 + modal_h
-    draw.rounded_rectangle([mx1 - 4, my1 - 4, mx2 + 4, my2 + 4], radius=24, fill=(0, 240, 255, 60))
-    draw.rounded_rectangle([mx1, my1, mx2, my2], radius=20, fill=(15, 18, 28, 250), outline=PLAYER_ACCENT, width=2)
-    cx = w // 2
-
-    colors = {"YOU WIN": (0, 255, 160, 255), "AI WINS": (255, 75, 95, 255), "DRAW": (255, 215, 0, 255)}
-    draw.text((cx, my1 + 34), f"MATCH COMPLETE  -  {session.player_name.upper()}", font=FONT_CARD_TITLE, fill=(160, 180, 210, 255), anchor="mm")
-    draw.text((cx, my1 + 84), summary.headline, font=FONT_BANNER, fill=colors[summary.headline], anchor="mm")
-    draw.text((cx, my1 + 132), f"YOU {summary.wins}     AI {summary.losses}     DRAWS {summary.ties}", font=FONT_TITLE, fill=(255, 255, 255, 255), anchor="mm")
-    draw.line([(mx1 + 40, my1 + 160), (mx2 - 40, my1 + 160)], fill=(50, 60, 80, 255), width=1)
-
-    draw.text((cx, my1 + 188), "WHAT THE AI LEARNED ABOUT YOU", font=FONT_LABEL_BOLD, fill=(255, 120, 170, 255), anchor="mm")
-    if summary.predicted_rounds:
-        line = (f"It predicted {summary.hits} of {summary.predicted_rounds} of your throws "
-                f"({round(summary.accuracy * 100)}%). Guessing blindly gets about 33%.")
+        c.rect(x, y, w, h, fill=theme.TILE_LINE, radius=14)
+        c.rect(x + 1, y + 1, w - 2, h - 2, fill=theme.TILE, radius=13)
+    height = c.L.d(h - 10)
+    icon = gesture_icon(move, height, opacity=1.0 if lit else (0.34 if dim else 0.62), upside_down=hanging)
+    if icon is not None:
+        c.paste_centered(icon, x + w / 2, y + (2 if hanging else 6))
     else:
-        line = "It never had enough to make a prediction."
-    draw.text((cx, my1 + 220), line, font=FONT_SUB_BANNER, fill=(235, 235, 245, 255), anchor="mm")
-
-    # Running accuracy as the match went on, with chance marked
-    gx1, gy1, gx2, gy2 = mx1 + 70, my1 + 252, mx2 - 70, my1 + 372
-    draw.rounded_rectangle([gx1 - 12, gy1 - 12, gx2 + 12, gy2 + 12], radius=10, fill=(20, 26, 40, 255))
-    chance_y = gy2 - int((gy2 - gy1) / 3)
-    for dash in range(gx1, gx2, 14):
-        draw.line([(dash, chance_y), (dash + 7, chance_y)], fill=(255, 255, 255, 140), width=1)
-    draw.text((gx2 - 2, chance_y - 10), "chance", font=FONT_HISTORY, fill=(170, 180, 200, 255), anchor="rm")
-    draw.text((gx1 - 18, gy1), "100%", font=FONT_HISTORY, fill=(130, 145, 170, 255), anchor="rm")
-    draw.text((gx1 - 18, gy2), "0%", font=FONT_HISTORY, fill=(130, 145, 170, 255), anchor="rm")
-    count = len(summary.running_accuracy)
-    points = [((gx1 + int(i * (gx2 - gx1) / (count - 1))) if count > 1 else (gx1 + gx2) // 2,
-               gy2 - int((gy2 - gy1) * acc)) for i, acc in enumerate(summary.running_accuracy)]
-    if len(points) > 1:
-        draw.line(points, fill=(255, 120, 170, 255), width=3)
-    for point, hit in zip(points, summary.hit_flags):
-        draw.ellipse([point[0] - 6, point[1] - 6, point[0] + 6, point[1] + 6],
-                     fill=(0, 255, 160, 255) if hit else (255, 75, 95, 255))
-    draw.text((cx, gy2 + 26), "green = the AI guessed that throw, red = it missed", font=FONT_HISTORY, fill=(150, 160, 180, 255), anchor="mm")
-
-    draw.text((cx, my1 + 420), "HABITS IT FOUND", font=FONT_LABEL_BOLD, fill=(255, 120, 170, 255), anchor="mm")
-    for j, habit_line in enumerate(summary.habits[:3]):
-        draw.text((cx, my1 + 450 + j * 28), habit_line, font=FONT_SUB_BANNER, fill=PLAYER_ACCENT, anchor="mm")
-    draw.text((cx, my1 + 538), "[SPACE] New match      [P] Switch player      [Q] Quit", font=FONT_LABEL_BOLD, fill=(255, 200, 0, 255), anchor="mm")
+        c.text(x + w / 2, y + h / 2, move[0], 28, theme.WHITE if lit else theme.FAINT, True, "mm")
 
 
-_mask_cache = {}
-
-def _rounded_mask(w, h, radius):
-    if (w, h, radius) not in _mask_cache:
-        mask = Image.new("L", (w, h), 0)
-        ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1], radius=radius, fill=255)
-        _mask_cache[(w, h, radius)] = mask
-    return _mask_cache[(w, h, radius)]
-
-
-def _card_frame(draw, x1, y1, x2, y2, accent, glow, fill):
-    draw.rounded_rectangle([x1 - 2, y1 - 2, x2 + 2, y2 + 2], radius=18, fill=glow)
-    draw.rounded_rectangle([x1, y1, x2, y2], radius=16, fill=fill, outline=accent, width=2)
-
-
-def _pill(draw, cx, cy, text, font, color, pad=16, height=34):
-    left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
-    half_w = (right - left) // 2 + pad
-    draw.rounded_rectangle([cx - half_w, cy - height // 2, cx + half_w, cy + height // 2], radius=height // 2,
-                           fill=(15, 18, 28, 220), outline=color, width=1)
-    draw.text((cx, cy), text, font=font, fill=color, anchor="mm")
-
-
-def _status(draw, right, cy, text, color):
-    """A dot and a short status, right-aligned."""
-    left, top, text_right, bottom = draw.textbbox((0, 0), text, font=FONT_LABEL_BOLD)
-    draw.text((right, cy), text, font=FONT_LABEL_BOLD, fill=color, anchor="rm")
-    dot_x = right - (text_right - left) - 22
-    draw.ellipse([dot_x, cy - 5, dot_x + 10, cy + 5], fill=color)
-
-
-def _move_strip(overlay, draw, x1, y1, x2, y2, active, accent, active_fill):
-    """Rock, paper and scissors side by side, with the chosen one lit."""
+def _strip(c, x, y, w, h, lit, side):
     gap = 14
-    tile_w = (x2 - x1 - 2 * gap) // 3
+    tile_w = (w - 2 * gap) / 3
     for i, move in enumerate(CHOICES):
-        tx1 = x1 + i * (tile_w + gap)
-        tx2 = tx1 + tile_w
-        lit = move == active
-        draw.rounded_rectangle([tx1, y1, tx2, y2], radius=14, fill=active_fill if lit else (20, 28, 44, 220),
-                               outline=accent if lit else (45, 60, 85, 255), width=3 if lit else 1)
-        icon = gesture_icon(move, y2 - y1 - 10, opacity=1.0 if lit else (0.55 if active is None else 0.28))
+        _tile(c, x + i * (tile_w + gap), y, tile_w, h, move, side, move == lit, dim=lit is not None)
+
+
+def _trophy(c, cx, cy, size, colour):
+    k = size / 24
+    ox, oy = cx - 12 * k, cy - 12 * k
+    p = lambda px, py: (ox + px * k, oy + py * k)
+    for sign in (-1, 1):  # handles
+        pts = [p(12 + sign * 5, 5), p(12 + sign * 8.5, 5), p(12 + sign * 8.5, 8), p(12 + sign * 5, 10.5)]
+        c.line(pts, colour, 1.8 * k)
+    c.rect(ox + 7 * k, oy + 3 * k, 10 * k, 5.5 * k, fill=colour)
+    c.pie(ox + 12 * k, oy + 8.5 * k, 5 * k, 0, 180, colour)
+    c.rect(ox + 11 * k, oy + 12.5 * k, 2 * k, 4.5 * k, fill=colour)
+    c.rect(ox + 7.5 * k, oy + 17 * k, 9 * k, 3.2 * k, fill=colour, radius=1.2 * k)
+
+
+def _check(c, cx, cy, r=18):
+    c.circle(cx, cy, r, fill=theme.GREEN)
+    k = r / 18
+    c.line([(cx - 7 * k, cy), (cx - 2 * k, cy + 6 * k), (cx + 8 * k, cy - 6 * k)], theme.WHITE, 3.4 * k)
+
+
+def _spinner(c, cx, cy, now, r=16):
+    c.circle(cx, cy, r, outline=theme.TRACK, width=4)
+    start = (now * 330) % 360
+    c.arc(cx, cy, r, start, start + 90, theme.AMBER, 4)
+
+
+def _hold_ring(c, x, y, w, h, progress):
+    cx, cy, r = x + w / 2, y + h * 0.56, min(w, h) * 0.36
+    c.circle(cx, cy, r, outline=(236, 232, 232), width=10)
+    if progress > 0:
+        c.arc(cx, cy, r, -90, -90 + 360 * progress, theme.PLAYER, 10)
+
+
+def _camera(c, view, rect, placeholder="No camera picture"):
+    x, y, w, h = rect
+    if view is None:
+        c.rect(x, y, w, h, fill=theme.TILE, radius=16)
+        c.text(x + w / 2, y + h / 2, placeholder, 18, theme.FAINT, False, "mm")
+        return
+    c.paste_rounded(Image.fromarray(cv2.cvtColor(view.image, cv2.COLOR_BGR2RGB)), x, y, w, h, 16)
+
+
+def _gradient(L, w, h, top, bottom):
+    t = np.linspace(0, 1, h, dtype=np.float32)[:, None, None]
+    rows = np.array(top, np.float32) * (1 - t) + np.array(bottom, np.float32) * t
+    return Image.fromarray(np.broadcast_to(rows, (h, w, 3)).astype(np.uint8), "RGB")
+
+
+def _dim(c, strength=0.45):
+    c.img.paste(Image.blend(c.img, Image.new("RGB", c.img.size, (20, 30, 50)), strength))
+
+
+# ---------------------------------------------------------------- 1. start screen
+_HAND_GRADIENTS = {"ROCK": ((15, 118, 110), (19, 78, 74)), "PAPER": ((71, 85, 105), (15, 23, 42)),
+                   "SCISSORS": ((159, 29, 29), (63, 13, 13))}
+_hand_cards = {}
+
+
+def _hand_card(L, move, angle):
+    key = (L.w, L.h, move)
+    if key not in _hand_cards:
+        w, h = L.d(156), L.d(200)
+        card = _gradient(L, w, h, *_HAND_GRADIENTS[move]).convert("RGBA")
+        icon = gesture_icon(move, L.d(164 if move == "ROCK" else 184))
         if icon is not None:
-            overlay.alpha_composite(icon, (tx1 + (tile_w - icon.width) // 2, y1 + 6))
+            card.alpha_composite(icon, ((w - icon.width) // 2, h - icon.height + L.d(6)))
+        mask = Image.new("L", (w, h), 0)
+        from PIL import ImageDraw
+        ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1], radius=L.d(22), fill=255)
+        card.putalpha(mask)
+        _hand_cards[key] = card.rotate(angle, resample=Image.BICUBIC, expand=True)
+    return _hand_cards[key]
+
+
+def _build_start(c):
+    draw_card(c, 740, 40, 500, 640, accent=theme.AMBER)
+
+
+def _start(session, L, now):
+    c = _begin(L, "start", _build_start)
+    c.runs(390, 96, [("ROCK PAPER SCISSORS ", theme.INK), ("AI", theme.PLAYER)], 44)
+    c.text(390, 142, "An AI that learns your habits. Can you beat it?", 19, theme.MUTED, False, "mm")
+    for move, cx, angle, delay in (("ROCK", 215, 5, 0), ("PAPER", 390, 0, 0.5), ("SCISSORS", 565, -5, 1.0)):
+        lift = 12 * (0.5 - 0.5 * math.cos(2 * math.pi * (now + delay) / 3.4))
+        card = _hand_card(L, move, angle)
+        c.img.paste(card, (L.x(cx) - card.width // 2, L.y(296 - lift) - card.height // 2), card)
+
+    c.rect(214, 435, 352, 54, fill=theme.PLAYER, radius=27)
+    parts = [("PRESS", None), ("SPACE", "key"), ("TO PLAY", None)]
+    widths = [c.tw(t, 26, True) if k is None else max(26, c.tw(t, 13, True) + 16) for t, k in parts]
+    x = 390 - (sum(widths) + 24) / 2
+    for (text, kind), width in zip(parts, widths):
+        if kind is None:
+            c.text(x, 462, text, 26, theme.WHITE, True)
         else:
-            draw.text(((tx1 + tx2) // 2, (y1 + y2) // 2), move, font=FONT_LABEL_BOLD,
-                      fill=accent if lit else (120, 140, 170, 255), anchor="mm")
+            c.rect(x, 450, width, 24, fill=theme.WHITE, radius=8)
+            c.text(x + width / 2, 462, text, 13, theme.PLAYER_D, True, "mm")
+        x += width + 12
+    c.text(390, 512, "Beat the AI to climb the leaderboard", 15, theme.MUTED, False, "mm")
+    c.text(390, 664, "Your hand is tracked live on this computer. No video is saved.", 13, theme.FAINT, False, "mm")
 
-
-_background_cache = {}
-
-def get_background(w, h):
-    if (w, h) not in _background_cache:
-        bg = Image.new("RGBA", (w, h), (12, 16, 26, 255))
-        bg_draw = ImageDraw.Draw(bg)
-        grid_color = (16, 22, 35, 255)  # grid lines pre-blended onto the background
-        for gx in range(0, w, 80):
-            bg_draw.line([(gx, 0), (gx, h)], fill=grid_color, width=1)
-        for gy in range(0, h, 80):
-            bg_draw.line([(0, gy), (w, gy)], fill=grid_color, width=1)
-        _background_cache[(w, h)] = bg
-    return _background_cache[(w, h)]
-
-def render_ui(session, w, h, current_time, live_gesture, view):
-
-    # Dark arena background with grid, rendered once per resolution and reused
-    pil_frame = get_background(w, h).copy()
-    overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(overlay)
-
-    # -------------------------------------------------------------
-    # STATE 1: NAME INPUT PROFILE SCREEN
-    # -------------------------------------------------------------
-    if session.state == STATE_NAME_INPUT:
-        draw.text((w // 2, 70), "ROCK PAPER SCISSORS AI", font=FONT_BANNER, fill=(35, 55, 90, 180), anchor="mm")
-
-        modal_w, modal_h = 580, 280
-        mx1 = (w - modal_w) // 2
-        my1 = (h - modal_h) // 2
-        mx2 = mx1 + modal_w
-        my2 = my1 + modal_h
-
-        draw.rounded_rectangle([mx1 - 4, my1 - 4, mx2 + 4, my2 + 4], radius=24, fill=(0, 240, 255, 60))
-        draw.rounded_rectangle([mx1, my1, mx2, my2], radius=20, fill=(15, 18, 28, 250), outline=(0, 240, 255, 255), width=2)
-
-        draw.text((mx1 + modal_w // 2, my1 + 35), "PLAYER PROFILE LOGIN", font=FONT_TITLE, fill=(255, 255, 255, 255), anchor="mm")
-        draw.text((mx1 + modal_w // 2, my1 + 72), "AI remembers unique habits & scores for each player", font=FONT_LABEL, fill=(160, 180, 210, 255), anchor="mm")
-
-        ib_x1, ib_y1, ib_x2, ib_y2 = mx1 + 40, my1 + 105, mx2 - 40, my1 + 175
-        draw.rounded_rectangle([ib_x1, ib_y1, ib_x2, ib_y2], radius=12, fill=(25, 32, 48, 240), outline=(70, 90, 130, 255), width=2)
-        
-        cursor = "_" if int(current_time * 2) % 2 == 0 else ""
-        display_name = (session.input_text if session.input_text else "Enter Name...") + cursor
-        text_color = (0, 255, 220, 255) if session.input_text else (120, 140, 170, 255)
-        draw.text((ib_x1 + 20, ib_y1 + 16), display_name, font=FONT_INPUT, fill=text_color)
-
-        draw.text((mx1 + modal_w // 2, my1 + 225), "Press [ENTER] to Confirm   |   [ESC] Use Guest", font=FONT_LABEL_BOLD, fill=(255, 200, 0, 255), anchor="mm")
-
-        final_img = Image.alpha_composite(pil_frame, overlay)
-        return cv2.cvtColor(np.array(final_img.convert("RGB")), cv2.COLOR_RGB2BGR)
-
-    # -------------------------------------------------------------
-    # STATE 2: RETURNING PLAYER SESSION CHOICE SCREEN
-    # -------------------------------------------------------------
-    elif session.state == STATE_SESSION_CHOICE:
-        draw.text((w // 2, 70), "ROCK PAPER SCISSORS AI", font=FONT_BANNER, fill=(35, 55, 90, 180), anchor="mm")
-
-        modal_w, modal_h = 680, 340
-        mx1 = (w - modal_w) // 2
-        my1 = (h - modal_h) // 2
-        mx2 = mx1 + modal_w
-        my2 = my1 + modal_h
-
-        draw.rounded_rectangle([mx1 - 4, my1 - 4, mx2 + 4, my2 + 4], radius=24, fill=(0, 240, 255, 70))
-        draw.rounded_rectangle([mx1, my1, mx2, my2], radius=20, fill=(15, 18, 28, 250), outline=(0, 240, 255, 255), width=2)
-
-        draw.text((mx1 + modal_w // 2, my1 + 35), f"WELCOME BACK, {session.temp_player_name.upper()}!", font=FONT_MODAL_TITLE, fill=(0, 240, 255, 255), anchor="mm")
-        
-        stats_text = f"Previous Session: YOU {session.prev_score_player}  |  AI {session.prev_score_ai}  |  TIES {session.prev_score_ties}   (Best Streak: {session.prev_best_streak})"
-        draw.text((mx1 + modal_w // 2, my1 + 75), stats_text, font=FONT_LABEL, fill=(200, 215, 240, 255), anchor="mm")
-
-        b1_x1, b1_y1, b1_x2, b1_y2 = mx1 + 40, my1 + 115, mx2 - 40, my1 + 185
-        draw.rounded_rectangle([b1_x1, b1_y1, b1_x2, b1_y2], radius=14, fill=(15, 45, 60, 240), outline=(0, 230, 255, 255), width=2)
-        draw.text((b1_x1 + 25, b1_y1 + 14), "[ENTER] or [N]  START NEW GAME", font=FONT_LABEL_BOLD, fill=(0, 255, 220, 255))
-        draw.text((b1_x1 + 25, b1_y1 + 42), "Reset scores to 0-0  (Keeps AI learned habits & best session.streak record)", font=FONT_LABEL, fill=(180, 210, 230, 255))
-
-        b2_x1, b2_y1, b2_x2, b2_y2 = mx1 + 40, my1 + 205, mx2 - 40, my1 + 275
-        draw.rounded_rectangle([b2_x1, b2_y1, b2_x2, b2_y2], radius=14, fill=(45, 20, 45, 240), outline=(240, 80, 220, 255), width=2)
-        draw.text((b2_x1 + 25, b2_y1 + 14), "[C]  CONTINUE / RESUME SCORES", font=FONT_LABEL_BOLD, fill=(255, 120, 240, 255))
-        draw.text((b2_x1 + 25, b2_y1 + 42), f"Resume previous scores (YOU: {session.prev_score_player} | AI: {session.prev_score_ai} | TIES: {session.prev_score_ties})", font=FONT_LABEL, fill=(220, 190, 220, 255))
-
-        draw.text((mx1 + modal_w // 2, my1 + 305), "Press [ESC] to change name", font=FONT_LABEL, fill=(140, 150, 175, 255), anchor="mm")
-
-        final_img = Image.alpha_composite(pil_frame, overlay)
-        return cv2.cvtColor(np.array(final_img.convert("RGB")), cv2.COLOR_RGB2BGR)
-
-    elif session.state == STATE_SUMMARY:
-        _draw_summary(draw, session, w, h)
-        final_img = Image.alpha_composite(pil_frame, overlay)
-        return cv2.cvtColor(np.array(final_img.convert("RGB")), cv2.COLOR_RGB2BGR)
-
-    # -------------------------------------------------------------
-    # A. TOP SCOREBOARD DOCK (Glassmorphic Dark Panel with Neon Border)
-    # -------------------------------------------------------------
-    bar_x1, bar_y1, bar_x2, bar_y2 = 30, 18, w - 30, 120
-    draw.rounded_rectangle([bar_x1, bar_y1, bar_x2, bar_y2], radius=20, fill=(15, 17, 24, 235), outline=(60, 70, 95, 255), width=2)
-    draw.line([(bar_x1 + 30, bar_y1 + 2), (w // 2, bar_y1 + 2)], fill=(0, 240, 255, 255), width=3)
-    draw.line([(w // 2, bar_y1 + 2), (bar_x2 - 30, bar_y1 + 2)], fill=(240, 60, 255, 255), width=3)
-
-    # Left: Player Name & AI Mode Tag
-    draw.text((bar_x1 + 25, bar_y1 + 16), f"PLAYER: {session.player_name.upper()}", font=FONT_TITLE, fill=(255, 255, 255, 255))
-    
-    mode_color = (0, 230, 180, 255) if session.engine.mode == "Predictive" else (220, 220, 220, 255)
-    ai_tag = f"AI: {session.engine.mode.upper()} [D to toggle]"
-    t_left, t_top, t_right, t_bottom = draw.textbbox((0, 0), ai_tag, font=FONT_LABEL)
-    tag_w = (t_right - t_left) + 40
-    pill_x1 = bar_x1 + 25
-    pill_y1 = bar_y1 + 54
-    pill_x2 = pill_x1 + tag_w
-    pill_y2 = pill_y1 + 32
-    
-    draw.rounded_rectangle([pill_x1, pill_y1, pill_x2, pill_y2], radius=10, fill=(30, 36, 50, 240), outline=(60, 75, 105, 255), width=1)
-    draw.ellipse([pill_x1 + 12, pill_y1 + 11, pill_x1 + 22, pill_y1 + 21], fill=mode_color)
-    draw.text((pill_x1 + 28, pill_y1 + 5), ai_tag, font=FONT_LABEL, fill=mode_color)
-
-    # Center: Battle Score Badges (Player vs AI)
-    center_x = w // 2
-    draw.rounded_rectangle([center_x - 170, bar_y1 + 20, center_x - 45, bar_y1 + 86], radius=12, fill=(10, 45, 65, 230), outline=(0, 220, 255, 255), width=2)
-    draw.text((center_x - 158, bar_y1 + 24), "YOU", font=FONT_LABEL_BOLD, fill=(0, 220, 255, 255))
-    draw.text((center_x - 85, bar_y1 + 28), str(session.score_player), font=FONT_SCORE, fill=(255, 255, 255, 255))
-
-    draw.text((center_x - 20, bar_y1 + 38), "VS", font=FONT_LABEL_BOLD, fill=(140, 150, 180, 255))
-    if config.MATCH_ROUNDS > 0:
-        played = len(session.match_log)
-        shown_round = played if session.state == STATE_SHOW_RESULT and played else min(played + 1, config.MATCH_ROUNDS)
-        draw.text((center_x, bar_y1 + 72), f"{shown_round}/{config.MATCH_ROUNDS}", font=FONT_HISTORY,
-                  fill=(140, 150, 180, 255), anchor="mm")
-
-    draw.rounded_rectangle([center_x + 45, bar_y1 + 20, center_x + 170, bar_y1 + 86], radius=12, fill=(65, 15, 35, 230), outline=(255, 60, 110, 255), width=2)
-    draw.text((center_x + 58, bar_y1 + 24), "AI", font=FONT_LABEL_BOLD, fill=(255, 80, 130, 255))
-    draw.text((center_x + 130, bar_y1 + 28), str(session.score_ai), font=FONT_SCORE, fill=(255, 255, 255, 255))
-
-    # Right: Streak & Match History Pills
-    streak_str = f"STREAK: {session.streak}  (Best: {session.best_streak})"
-    s_left, s_top, s_right, s_bottom = draw.textbbox((0, 0), streak_str, font=FONT_LABEL_BOLD)
-    s_w = (s_right - s_left) + 45
-    s_x2 = bar_x2 - 25
-    s_x1 = s_x2 - s_w
-    s_y1 = bar_y1 + 16
-    s_y2 = s_y1 + 32
-
-    streak_bg = (60, 42, 10, 240) if session.streak > 0 else (25, 28, 38, 220)
-    streak_border = (255, 190, 0, 255) if session.streak > 0 else (55, 65, 85, 255)
-    draw.rounded_rectangle([s_x1, s_y1, s_x2, s_y2], radius=10, fill=streak_bg, outline=streak_border, width=1)
-    
-    star_col = (255, 210, 50, 255) if session.streak > 0 else (120, 130, 150, 255)
-    draw.ellipse([s_x1 + 12, s_y1 + 11, s_x1 + 22, s_y1 + 21], fill=star_col)
-    draw.text((s_x1 + 28, s_y1 + 4), streak_str, font=FONT_LABEL_BOLD, fill=star_col)
-
-    # History Pills
-    draw.text((s_x2 - 210, bar_y1 + 68), "RECENT:", font=FONT_LABEL, fill=(140, 150, 175, 255), anchor="lm")
-    hx = s_x2 - 130
-    badge_size = 22
-    by = bar_y1 + 57
-    for res in session.match_history:
-        if res == 'W':
-            col = (0, 240, 140, 255)
-            sym = "W"
-        elif res == 'L':
-            col = (255, 65, 95, 255)
-            sym = "L"
+    # Leaderboard
+    c.text(768, 84, "LEADERBOARD", 26, theme.INK, True)
+    c.text(768, 112, "Who beat the AI most · best score in a match", 13.5, theme.MUTED)
+    c.spaced(782, 146, "#", 11, theme.FAINT, spacing=2, anchor="l")
+    c.spaced(868, 146, "PLAYER", 11, theme.FAINT, spacing=2, anchor="l")
+    c.spaced(1208, 146, "WON – LOST", 11, theme.FAINT, spacing=2, anchor="rm")
+    rows = session.leaderboard_rows
+    for i, (name, best) in enumerate(rows):
+        y = 162 + i * 57
+        top = i == 0
+        if top:
+            c.rect(756, y, 468, 50, fill=theme.AMBER, radius=14)
+            c.rect(758, y + 2, 464, 46, fill=theme.AMBER_T, radius=12)
         else:
-            col = (255, 200, 0, 255)
-            sym = "D"
-        draw.rounded_rectangle([hx, by, hx + badge_size, by + badge_size], radius=6, fill=col)
-        draw.text((hx + badge_size // 2, by + badge_size // 2), sym, font=FONT_HISTORY, fill=(10, 15, 20, 255), anchor="mm")
-        hx += 26
-
-    # -------------------------------------------------------------
-    # B. ARENA: PLAYER CARD (live camera) | AI CARD (its hand)
-    # -------------------------------------------------------------
-    lay = arena_layout(w, h)
-    cam_w, cam_h = lay["panel_w"], lay["panel_h"]
-    card_y1, card_y2 = lay["card_y1"], lay["card_y2"]
-    px1 = lay["player_x1"]
-    px2 = px1 + lay["card_w"]
-    ax1 = lay["ai_x1"]
-    ax2 = ax1 + lay["card_w"]
-    cam_x, cam_y = px1 + 20, lay["panel_y1"]
-    ai_panel_x = ax1 + 20
-    header_y = card_y1 + 30
-
-    # 1. Player card
-    _card_frame(draw, px1, card_y1, px2, card_y2, PLAYER_ACCENT, (0, 240, 255, 30), (15, 22, 34, 245))
-    draw.text((px1 + 24, header_y), "YOUR ACTION", font=FONT_CARD_TITLE, fill=PLAYER_ACCENT, anchor="lm")
-
-    if session.state == STATE_SHOW_RESULT:
-        shown_move = session.player_move
-        status_text = f"FINAL MOVE: {shown_move}" if shown_move else "NO MOVE"
-        status_col = (0, 255, 180, 255) if shown_move else (255, 70, 70, 255)
+            c.rect(756, y, 468, 50, fill=theme.ROW, radius=14)
+        if i < 3:
+            _trophy(c, 784, y + 25, 40, theme.MEDALS[i])
+        else:
+            c.text(785, y + 26, str(i + 1), 19, theme.FAINT, True, "mm")
+        _tile(c, 816, y + 6, 38, 38, best["fav"], "p", True)
+        c.text(868, y + 26, name.upper(), 21, theme.INK, True)
+        c.text(1204, y + 26, f"{best['wins']} – {best['losses']}", 21, theme.AMBER_D if top else theme.INK2, True, "rm")
+    if rows:
+        c.text(990, 652, "Your name could be here", 14, theme.FAINT, True, "mm")
     else:
-        shown_move = live_gesture
-        status_text = f"DETECTED: {live_gesture}" if live_gesture else "SEARCHING..."
-        status_col = (0, 255, 150, 255) if live_gesture else (255, 180, 50, 255)
-    _status(draw, px2 - 24, header_y, status_text, status_col)
+        c.text(990, 330, "No matches yet", 24, theme.INK2, True, "mm")
+        c.text(990, 366, "Be the first to beat the AI!", 17, theme.MUTED, False, "mm")
+    return c
 
-    cam_pil = Image.fromarray(cv2.cvtColor(view.image, cv2.COLOR_BGR2RGB)).convert("RGBA")
-    overlay.paste(cam_pil, (cam_x, cam_y), _rounded_mask(cam_w, cam_h, 14))
-    draw.rounded_rectangle([cam_x, cam_y, cam_x + cam_w, cam_y + cam_h], radius=14, outline=(0, 220, 255, 200), width=2)
 
-    if session.state == STATE_COUNTDOWN:
-        _pill(draw, cam_x + cam_w // 2, cam_y + 28, "SHOW GESTURE NOW!", FONT_LABEL_BOLD, (255, 255, 255, 255))
-    elif not view.hand_found and session.state != STATE_SHOW_RESULT:
-        _pill(draw, cam_x + cam_w // 2, cam_y + 28, "SHOW YOUR HAND", FONT_LABEL_BOLD, (255, 180, 50, 255))
-    if session.state == STATE_IDLE:
-        _pill(draw, cam_x + cam_w // 2, cam_y + cam_h - 34, "ARE YOU READY?   Press [SPACE] to Start",
-              FONT_LABEL_BOLD, PLAYER_ACCENT, pad=22, height=40)
+# ---------------------------------------------------------------- 2. name, 3. camera check
+def _build_name(c):
+    draw_card(c, 290, 236, 700, 112, glow=theme.PLAYER)
 
-    _move_strip(overlay, draw, cam_x, lay["strip_y1"], cam_x + cam_w, lay["strip_y2"],
-                shown_move, PLAYER_ACCENT, (10, 45, 65, 235))
 
-    # 2. AI card
-    _card_frame(draw, ax1, card_y1, ax2, card_y2, AI_ACCENT, (255, 60, 130, 30), (32, 14, 26, 245))
-    draw.text((ax1 + 24, header_y), "AI OPPONENT", font=FONT_CARD_TITLE, fill=(255, 80, 140, 255), anchor="lm")
-    draw.text((ax2 - 24, header_y), f"MARKOV AI ({session.engine.mode.upper()})", font=FONT_LABEL,
-              fill=(220, 160, 190, 255), anchor="rm")
+def _name(session, L, now):
+    c = _begin(L, "name", _build_name)
+    c.rect(290, 236, 700, 112, fill=theme.PLAYER, radius=22)
+    c.rect(293, 239, 694, 106, fill=theme.CARD, radius=19)
+    c.spaced(640, 64, "STEP 1 OF 2", 13, theme.FAINT)
+    c.text(640, 128, "What's your name?", 46, theme.INK, True, "mm")
+    c.text(640, 180, "It goes on the leaderboard if you beat the AI.", 19, theme.MUTED, False, "mm")
+    cursor = "|" if int(now * 2) % 2 == 0 else " "
+    if session.input_text:
+        c.runs(640, 292, [(session.input_text, theme.INK), (cursor, theme.PLAYER)], 56)
+    else:
+        c.text(640, 292, "Your name", 56, theme.TRACK, True, "mm")
+        if cursor == "|":
+            c.rect(638, 262, 3, 60, fill=theme.PLAYER)
+    c.text(640, 390, f"Up to {config.NAME_MAX_LENGTH} letters. Leave it empty to play as Guest.", 15, theme.FAINT, False, "mm")
+    c.rect(440, 436, 400, 58, fill=theme.PLAYER, radius=14)
+    width = max(26, c.tw("ENTER", 13, True) + 16) + 10 + c.tw("Continue", 17, True)
+    x = 640 - width / 2
+    edge = _keycap(c, x, 465, "ENTER")
+    c.text(edge + 10, 465, "Continue", 17, theme.WHITE, True)
+    _hints(c, [("ESC", "Back")], 650 + 22)
+    return c
 
-    draw.rounded_rectangle([ai_panel_x, cam_y, ai_panel_x + cam_w, cam_y + cam_h], radius=14,
-                           fill=(40, 16, 34, 255), outline=(110, 50, 85, 255), width=2)
-    ai_cx = ai_panel_x + cam_w // 2
-    ai_cy = cam_y + cam_h // 2
 
-    if session.state == STATE_SHOW_RESULT and session.ai_move:
-        # The AI hand hangs down from the top edge. In learn mode it moves left to make room for what the AI expected
-        hand_cx = ai_panel_x + 112 if session.learn_mode else ai_cx
-        icon = gesture_icon(session.ai_move, cam_h - 8, upside_down=True)
+def _build_check(c):
+    draw_card(c, 730, 156, 490, 440, accent=theme.PLAYER)
+
+
+def _check_screen(session, L, now, live_gesture, view):
+    c = _begin(L, "check", _build_check)
+    c.spaced(640, 40, "STEP 2 OF 2", 13, theme.FAINT)
+    c.text(640, 84, "Check your camera", 36, theme.INK, True, "mm")
+    c.text(640, 124, "Hold your hand up. The game starts by itself.", 17, theme.MUTED, False, "mm")
+    _camera(c, view, CHECK_CAM, "Waiting for the camera")
+    x, y, w, h = CHECK_CAM
+    progress = session.hold_progress(now)
+    _hold_ring(c, x, y, w, h, progress)
+    hand = view is not None and view.hand_found
+    if progress > 0:
+        left = max(0.0, config.HOLD_TO_START_SECONDS * (1 - progress))
+        _pill(c, x + w / 2, y + h - 38, f"Hold still… {left:.1f} s", theme.PLAYER)
+    else:
+        _pill(c, x + w / 2, y + h - 38, "Hold your hand up" if not hand else "Hold your hand still", theme.AMBER_D)
+    steps = [("Camera connected", True), ("Hand detected", hand or progress > 0), ("Hold still for 2 seconds", False)]
+    for i, (label, ok) in enumerate(steps):
+        cy = 206 + i * 56
+        if ok:
+            _check(c, 778, cy)
+        else:
+            _spinner(c, 778, cy, now)
+        c.text(814, cy, label, 19, theme.INK if ok else theme.AMBER_D, True)
+    c.rect(760, 364, 430, 1, fill=theme.CARD_LINE)
+    c.spaced(760, 392, "HOW A ROUND WORKS", 12, theme.FAINT, spacing=3, anchor="l")
+    for i, move in enumerate(CHOICES):
+        _tile(c, 760 + i * 112, 412, 96, 108, move, "p", True)
+    c.wrapped(760, 541, "Throw on SHOOT! Rock beats scissors, scissors beat paper, paper beats rock.", 14, theme.MUTED, 430, 19)
+    _hints(c, [("SPACE", "Start now"), ("ESC", "Back")], 678)
+    return c
+
+
+# ---------------------------------------------------------------- 4. the match
+def _build_match(win):
+    def build(c):
+        draw_card(c, 28, 24, 440, 616, accent=theme.PLAYER, glow=theme.GREEN if win == "p" else None)
+        draw_card(c, 812, 24, 440, 616, accent=theme.AI, glow=theme.GREEN if win == "a" else None)
+        draw_card(c, 500, 46, 280, 560)
+        x, y, w, h = 828, 86, 408, 382
+        panel = _gradient(c.L, c.L.d(w), c.L.d(h), theme.CLOUD_TOP, theme.CLOUD_BOTTOM)
+        c.paste_rounded(panel, x, y, w, h, 16)
+    return build
+
+
+def _learn_panel(c, session):
+    """What the AI expected, in place of its move tiles. Only drawn after the reveal, in Learn mode."""
+    x, y, w, h = 828, 482, 408, 140
+    prediction = session.prediction
+    c.rect(x, y, w, h, fill=theme.AI_L, radius=14)
+    c.rect(x + 1, y + 1, w - 2, h - 2, fill=theme.AI_T, radius=13)
+    evidence_colors = {"LOW": theme.AMBER_D, "MEDIUM": theme.PLAYER_D, "HIGH": theme.GREEN_D}
+    c.text(x + 206, y + 18, f"EVIDENCE: {prediction.evidence}", 12, evidence_colors[prediction.evidence], True)
+    c.wrapped(x + 206, y + 42, session.explanation, 13.5, theme.INK2, 194, 17, max_lines=6)
+    if prediction.expected is None:
+        c.text(x + 100, y + 70, "NO PATTERN YET", 17, theme.MUTED, True, "mm")
+        return
+    base, max_h = y + 106, 68
+    top = prediction.expected
+    for i, move in enumerate(CHOICES):
+        bx = x + 16 + i * 60
+        probability = prediction.probs[move]
+        bar_h = max(6, round(max_h * probability))
+        thrown = move == session.player_move
+        if thrown:
+            c.rect(bx - 3, base - bar_h - 3, 50, bar_h + 6, fill=theme.PLAYER, radius=10)
+        c.rect(bx, base - bar_h, 44, bar_h, fill=theme.AI if move == top else theme.AI_L, radius=8)
+        c.text(bx + 22, base - bar_h - 12, f"{round(probability * 100)}%", 13, theme.INK2, True, "mm")
+        c.text(bx + 22, base + 14, move.capitalize(), 11, theme.PLAYER if thrown else theme.MUTED, True, "mm")
+    chance_y = base - max_h / 3
+    c.dashed_line(x + 8, chance_y, x + 198, chance_y, theme.FAINT, 1.5, 5, 4)
+    c.rect(x + 166, chance_y - 7, 32, 14, fill=theme.AI_T)
+    c.text(x + 198, chance_y, "chance", 10, theme.FAINT, False, "rm")
+
+
+def _pips(c, flags, total, current):
+    first = math.ceil(total / 2)
+    for row, (start, end) in enumerate(((0, first), (first, total))):
+        n = end - start
+        gap = 8 if first <= 8 else 5
+        size = min(24, (256 - gap * (first - 1)) // first)
+        x0 = 640 - (n * size + (n - 1) * gap) / 2
+        for k in range(n):
+            i = start + k
+            x, y = x0 + k * (size + gap), 484 + row * 32
+            if i < len(flags):
+                c.circle(x + size / 2, y + size / 2, size / 2, fill=theme.RESULT_COLORS[flags[i]])
+                c.text(x + size / 2, y + size / 2 - 1, flags[i], 11, theme.WHITE, True, "mm")
+            else:
+                if i == current:
+                    c.circle(x + size / 2, y + size / 2, size / 2 + 3, fill=theme.PLAYER_T)
+                c.circle(x + size / 2, y + size / 2, size / 2, fill=theme.CARD,
+                         outline=theme.PLAYER if i == current else (195, 203, 216), width=2)
+
+
+def _match(session, L, now, live_gesture, view):
+    state = session.state
+    revealed = state == STATE_SHOW_RESULT
+    valid = revealed and session.round_result != "INVALID"
+    win = {"PLAYER": "p", "AI": "a"}.get(session.round_result) if revealed else None
+    c = _begin(L, f"match-{win}", _build_match(win))
+
+    # ---- your card
+    c.text(52, 56, (session.player_name or "").upper(), 26, theme.PLAYER, True)
+    hand = view is not None and view.hand_found
+    if revealed:
+        if valid:
+            _chip(c, 452, 56, f"Final: {session.player_move}", theme.GREEN_D, theme.GREEN_T)
+        else:
+            _chip(c, 452, 56, "No hand seen", theme.AMBER_D, theme.AMBER_T)
+    elif hand:
+        _chip(c, 452, 56, "Hand detected", theme.GREEN_D, theme.GREEN_T)
+    else:
+        _chip(c, 452, 56, "Looking for your hand", theme.AMBER_D, theme.AMBER_T)
+
+    cx, cy, cw, ch = MATCH_CAM
+    _camera(c, view, MATCH_CAM)
+    if state == STATE_IDLE:
+        progress = session.hold_progress(now)
+        _hold_ring(c, cx, cy, cw, ch, progress)
+        if progress > 0:
+            _pill(c, cx + cw / 2, cy + ch - 32, f"Hold still… {config.HOLD_TO_START_SECONDS * (1 - progress):.1f} s", theme.PLAYER, 14)
+    elif state == STATE_COUNTDOWN:
+        _pill(c, cx + cw / 2, cy + 32, "Show your gesture on SHOOT!", theme.INK, 14)
+    elif revealed and not valid:
+        _pill(c, cx + cw / 2, cy + 32, "Hold your hand up before SHOOT", theme.AMBER_D, 14)
+    elif not hand:
+        _pill(c, cx + cw / 2, cy + 32, "Show your hand", theme.AMBER_D, 14)
+    lit = session.player_move if valid else (live_gesture if not revealed else None)
+    _strip(c, 44, 482, 408, 140, lit, "p")
+
+    # ---- the AI's card
+    c.text(836, 56, "ADAPTIVE AI", 22, theme.AI, True)
+    if session.learn_mode:
+        _chip(c, 1236, 56, "Learn mode", theme.PLAYER_D, theme.PLAYER_T, dot=True)
+    else:
+        _chip(c, 1236, 56, "Challenge", theme.MUTED, theme.CHIP, dot=True)
+    if valid:
+        icon = gesture_icon(session.ai_move, L.d(374), upside_down=True)
         if icon is not None:
-            overlay.alpha_composite(icon, (hand_cx - icon.width // 2, cam_y + 4))
+            c.paste_centered(icon, 1032, 90)
         else:
-            draw.text((hand_cx, ai_cy), session.ai_move, font=FONT_CARD_MOVE, fill=(255, 100, 160, 255), anchor="mm")
-        if session.learn_mode:
-            _draw_ai_read(draw, session, ai_panel_x + 236, cam_y, cam_w - 250)
-    elif session.state == STATE_COUNTDOWN:
-        # The dots are drawn after the word, with room kept for all three so the word never shifts
-        dots = "." * (int(current_time * 3) % 4)
-        word_w = draw.textlength("DECIDING", font=FONT_CARD_MOVE)
-        start_x = ai_cx - (word_w + draw.textlength("...", font=FONT_CARD_MOVE)) / 2
-        draw.text((start_x, ai_cy - 14), "DECIDING", font=FONT_CARD_MOVE, fill=(255, 180, 80, 255), anchor="lm")
-        draw.text((start_x + word_w + 2, ai_cy - 14), dots, font=FONT_CARD_MOVE, fill=(255, 180, 80, 255), anchor="lm")
-        draw.text((ai_cx, ai_cy + 28), "MOVE LOCKED", font=FONT_LABEL_BOLD, fill=(230, 180, 210, 255), anchor="mm")
-        if session.learn_mode:
-            evidence = session.prediction.evidence
-            draw.text((ai_cx, ai_cy + 58), f"EVIDENCE: {evidence}", font=FONT_LABEL, fill=EVIDENCE_COLORS[evidence], anchor="mm")
+            c.text(1032, 276, session.ai_move, 40, theme.AI, True, "mm")
+    elif state == STATE_COUNTDOWN:
+        dots = "." * (int(now * 3) % 4)
+        c.text(1032 - c.tw("DECIDING...", 34, True) / 2, 246, "DECIDING" + dots, 34, theme.INK, True)
+        c.text(1032, 290, "Its move is locked in", 17, theme.MUTED, False, "mm")
+    elif revealed:
+        c.text(1032, 246, "NO ROUND", 34, theme.INK, True, "mm")
+        c.text(1032, 290, "Nothing was counted", 17, theme.MUTED, False, "mm")
     else:
-        draw.text((ai_cx, ai_cy - 14), "READY", font=FONT_CARD_MOVE, fill=(180, 140, 170, 255), anchor="mm")
-        draw.text((ai_cx, ai_cy + 28), "AWAITING ROUND", font=FONT_LABEL_BOLD, fill=(230, 180, 210, 255), anchor="mm")
-        if session.learn_mode and session.engine.rounds_seen:
-            draw.text((ai_cx, ai_cy + 58), f"It has seen {session.engine.rounds_seen} of your throws", font=FONT_LABEL,
-                      fill=(190, 160, 180, 255), anchor="mm")
+        c.text(1032, 246, "READY", 34, theme.INK, True, "mm")
+        c.text(1032, 290, "The AI is waiting", 17, theme.MUTED, False, "mm")
+    if valid and session.learn_mode:
+        _learn_panel(c, session)
+    else:
+        _strip(c, 828, 482, 408, 140, session.ai_move if valid else None, "ai")
 
-    _move_strip(overlay, draw, ai_panel_x, lay["strip_y1"], ai_panel_x + cam_w, lay["strip_y2"],
-                session.ai_move if session.state == STATE_SHOW_RESULT else None, AI_ACCENT, (65, 15, 35, 235))
+    if win == "p":
+        c.rect(300, 10, 160, 28, fill=theme.GREEN, radius=14)
+        c.spaced(380, 24, "WINNER", 13, theme.WHITE, spacing=2)
+    if win == "a":
+        c.rect(1084, 10, 160, 28, fill=theme.GREEN, radius=14)
+        c.spaced(1164, 24, "WINNER", 13, theme.WHITE, spacing=2)
 
-    # -------------------------------------------------------------
-    # C. COUNTDOWN RING AND RESULT BANNER
-    # -------------------------------------------------------------
-    if session.state == STATE_COUNTDOWN:
-        elapsed = current_time - session.state_start_time
+    _middle(c, session, now, valid)
+    return c
+
+
+def _middle(c, session, now, valid):
+    state = session.state
+    total = session.match_rounds or 15
+    c.spaced(640, 76, "ROUND", 12, theme.FAINT, spacing=3)
+    number = str(session.round_number)
+    parts = [(number, theme.INK, 44), (f" / {session.match_rounds}" if session.match_rounds else "", theme.FAINT, 22)]
+    width = sum(c.tw(t, s, True) for t, _, s in parts)
+    x = 640 - width / 2
+    for text, colour, size in parts:
+        c.text(x, 112 if size == 44 else 114, text, size, colour, True)
+        x += c.tw(text, size, True)
+    for x0, label, value, colour, tint in ((514, "YOU", session.score_player, theme.PLAYER, theme.PLAYER_T),
+                                           (648, "AI", session.score_ai, theme.AI, theme.AI_T)):
+        c.rect(x0, 136, 118, 80, fill=colour, radius=16)
+        c.rect(x0 + 2, 138, 114, 76, fill=tint, radius=14)
+        c.text(x0 + 59, 154, label, 13, colour, True, "mm")
+        c.text(x0 + 59, 188, str(value), 40, theme.INK, True, "mm")
+
+    if state == STATE_COUNTDOWN:
+        elapsed = now - session.state_start_time
         remaining = session.countdown_duration - elapsed
         progress = max(0.0, min(1.0, elapsed / session.countdown_duration))
-
-        # The ring replaces "VS" in the scoreboard bar
-        c_cx = w // 2
-        c_cy = 71
-
-        gauge_r = 34
-        bbox = [c_cx - gauge_r, c_cy - gauge_r, c_cx + gauge_r, c_cy + gauge_r]
-
-        draw.ellipse(bbox, fill=(15, 17, 24, 255), outline=(40, 50, 70, 200), width=5)
-        start_angle = -90
-        end_angle = start_angle + (360 * (1.0 - progress))
-        if end_angle > start_angle:
-            draw.arc(bbox, start=start_angle, end=end_angle, fill=(0, 255, 230, 255), width=5)
-
-        if remaining > 2.0:
-            count_str = "3"
-            color = (0, 255, 255, 255)
-        elif remaining > 1.0:
-            count_str = "2"
-            color = (0, 220, 255, 255)
-        elif remaining > 0.0:
-            count_str = "1"
-            color = (255, 180, 0, 255)
+        c.circle(640, 318, 80, fill=theme.TRACK)
+        if progress > 0:
+            c.pie(640, 318, 80, -90, -90 + 360 * progress, theme.PLAYER)
+        c.circle(640, 318, 71, fill=theme.CARD)
+        number = "3" if remaining > 2 else "2" if remaining > 1 else "1" if remaining > 0 else "GO"
+        c.text(640, 322, number, 96 if number != "GO" else 64, theme.PLAYER, True, "mm")
+        beat = 0 if remaining > 2 else 1 if remaining > 1 else 2 if remaining > 0 else 3
+        words = ["ROCK", "PAPER", "SCISSORS", "SHOOT!"]
+        parts = []
+        for i, word in enumerate(words):
+            parts.append((word, theme.PLAYER if i == beat else theme.FAINT))
+            if i < 3:
+                parts.append((" · ", theme.FAINT))
+        c.runs(640, 424, parts, 12.5)
+    elif state == STATE_SHOW_RESULT and valid:
+        kind = session.round_result
+        title, colour = {"PLAYER": ("YOU WIN!", theme.GREEN_D), "AI": ("AI WINS", theme.AI_D),
+                         "TIE": ("DRAW", theme.AMBER_D)}[kind]
+        c.text(640, 250, title, 34, colour, True, "mm")
+        _tile(c, 522, 274, 104, 120, session.player_move, "p", True)
+        _tile(c, 654, 274, 104, 120, session.ai_move, "ai", True, hanging=True)
+        c.text(640, 334, "vs", 13, theme.FAINT, True, "mm")
+        if kind == "PLAYER":
+            why, delta = f"{session.player_move} beats {session.ai_move}", "+1 point for you"
+        elif kind == "AI":
+            why, delta = f"{session.ai_move} beats {session.player_move}", "+1 point for the AI"
         else:
-            count_str = "GO!"
-            color = (0, 255, 140, 255)
+            why, delta = f"You both threw {session.player_move}", "No points this round"
+        c.text(640, 420, why, 15, theme.INK2, True, "mm")
+        c.text(640, 446, delta, 14, colour, True, "mm")
+    elif state == STATE_SHOW_RESULT:
+        c.text(640, 252, "MISSED IT", 30, theme.AMBER_D, True, "mm")
+        c.circle(640, 326, 52, fill=theme.AMBER_T)
+        for k in range(18):
+            c.arc(640, 326, 51, k * 20, k * 20 + 11, theme.AMBER, 3)
+        c.text(640, 328, "?", 48, theme.AMBER_D, True, "mm")
+        c.wrapped(520, 404, "No gesture was seen, so this round doesn't count. Go again!", 14, theme.MUTED, 240, 19, align="c")
+    else:
+        c.text(640, 254, "GET READY", 28, theme.INK, True, "mm")
+        c.circle(640, 332, 56, fill=theme.PLAYER)
+        c.d.polygon([(c.L.x(626), c.L.y(308)), (c.L.x(626), c.L.y(356)), (c.L.x(668), c.L.y(332))], fill=theme.WHITE)
+        group = c.tw("Press", 15) + 6 + max(26, c.tw("SPACE", 13, True) + 16)
+        c.text(640 - group / 2, 420, "Press", 15, theme.MUTED)
+        _keycap(c, 640 - group / 2 + c.tw("Press", 15) + 6, 420, "SPACE")
+        c.text(640, 446, f"or hold your hand still for {config.HOLD_TO_START_SECONDS:g} s", 13, theme.FAINT, False, "mm")
 
-        draw.text((c_cx, c_cy), count_str, font=FONT_CARD_MOVE, fill=color, anchor="mm")
+    flags = [{"PLAYER": "W", "AI": "L", "TIE": "D"}[r.result] for r in session.match_log]
+    if not session.match_rounds:
+        flags = flags[-total:]
+    _pips(c, flags, total, len(flags) if len(flags) < total else -1)
+    if session.streak:
+        c.runs(640, 560, [(f"STREAK {session.streak}", theme.AMBER_D), (f" · best {session.best_streak}", theme.FAINT)], 14)
+    else:
+        c.text(640, 560, "No streak yet", 14, theme.FAINT, True, "mm")
 
-    elif session.state == STATE_SHOW_RESULT:
-        # The banner sits at the bottom of the camera panel, so it never covers the AI's hand
-        banner_w, banner_h = 400, 84
-        bx = cam_x + (cam_w - banner_w) // 2
-        by = cam_y + cam_h - banner_h - 14
+    if state == STATE_COUNTDOWN:
+        hints = [("Q", "Quit")]
+    elif state == STATE_SHOW_RESULT:
+        after = "See your report" if session.match_complete else ("Go again" if not valid else "Next round")
+        hints = [("SPACE", after), ("P", "New player"), ("H", "Hide thinking" if session.learn_mode else "Learn mode"), ("Q", "Quit")]
+    else:
+        hints = [("SPACE", "Start round"), ("P", "New player"), ("H", "Learn mode"), ("Q", "Quit")]
+    _hints(c, hints)
 
-        if session.round_result == "PLAYER":
-            res_title = "VICTORY!"
-            res_sub = f"+1 Point to {session.player_name.upper()}"
-            banner_bg = (10, 45, 30, 245)
-            banner_border = (0, 255, 140, 255)
-            text_color = (0, 255, 160, 255)
-        elif session.round_result == "AI":
-            res_title = "AI WINS!"
-            res_sub = "+1 Point to AI Bot"
-            banner_bg = (45, 10, 20, 245)
-            banner_border = (255, 60, 80, 255)
-            text_color = (255, 75, 95, 255)
-        elif session.round_result == "TIE":
-            res_title = "DRAW MATCH!"
-            res_sub = "Both chose the same move"
-            banner_bg = (45, 35, 10, 245)
-            banner_border = (255, 200, 0, 255)
-            text_color = (255, 215, 0, 255)
+
+# ---------------------------------------------------------------- 5. report, every round
+def _gauge(c, cx, cy, r, fraction):
+    for t0, t1, colour in ((0, .4, (74, 222, 128)), (.4, .6, (251, 191, 36)), (.6, 1, (248, 113, 113))):
+        c.arc(cx, cy, r, 180 + 180 * t0, 180 + 180 * t1, colour, 24)
+    point = lambda t, rr: (cx + rr * math.cos(math.pi * (1 - t)), cy - rr * math.sin(math.pi * (1 - t)))
+    c.line([point(1 / 3, r - 18), point(1 / 3, r + 18)], theme.INK, 3)
+    c.text(point(1 / 3, r + 34)[0] - 6, point(1 / 3, r + 34)[1], "chance", 12, theme.MUTED, True, "rm")
+    c.line([(cx, cy), point(fraction, r - 34)], theme.INK, 6)
+    c.circle(cx, cy, 11, fill=theme.INK)
+
+
+def _build_summary(c):
+    draw_card(c, 40, 128, 380, 430, accent=theme.AI)
+    draw_card(c, 440, 128, 400, 430, accent=theme.PLAYER)
+    draw_card(c, 860, 128, 380, 430)
+
+
+def _summary(session, L, now):
+    summary = session.summary
+    c = _begin(L, "summary", _build_summary)
+    c.spaced(60, 52, "MATCH COMPLETE", 13, theme.FAINT, spacing=3, anchor="l")
+    c.text(60, 84, (session.player_name or "").upper(), 30, theme.PLAYER, True)
+    headline_colour = {"YOU WIN": theme.GREEN_D, "AI WINS": theme.AI_D, "DRAW": theme.AMBER_D}[summary.headline]
+    c.text(640, 58, summary.headline, 44, headline_colour, True, "mm")
+    draws = f" · {summary.ties} draw{'s' if summary.ties != 1 else ''}" if summary.ties else ""
+    c.text(640, 100, f"{summary.wins} – {summary.losses}{draws}", 17, theme.MUTED, False, "mm")
+    if session.rank:
+        c.runs(1220 - c.tw(f"#{session.rank} on the leaderboard", 17) / 2, 64,
+               [(f"#{session.rank}", theme.AMBER_D), (" on the leaderboard", theme.INK2)], 17)
+    else:
+        c.text(1220, 64, "Play with a name to join the leaderboard" if session.is_guest else "Playing as " + session.player_name,
+               15, theme.MUTED, True, "rm")
+
+    # Your title
+    index = title_index(summary)
+    c.spaced(230, 168, "YOUR TITLE", 12, theme.FAINT, spacing=3)
+    if index is None:
+        c.text(230, 212, "TOO FEW ROUNDS", 27, theme.MUTED, True, "mm")
+        c.text(230, 246, "The AI needs more throws to read you.", 15, theme.MUTED, False, "mm")
+    else:
+        c.text(230, 212, TITLES[index][0], 27, theme.AI, True, "mm")
+        c.text(230, 246, f"The AI read {round(summary.accuracy * 100)}% of your throws.", 16, theme.MUTED, False, "mm")
+    for i, (title, span, _) in enumerate(TITLES):
+        y, on = 280 + i * 40, i == index
+        if on:
+            c.rect(66, y, 328, 34, fill=theme.AI, radius=10)
+            c.rect(68, y + 2, 324, 30, fill=theme.AI_T, radius=8)
         else:
-            res_title = "NO DETECTION"
-            res_sub = "Keep your hand in view"
-            banner_bg = (35, 20, 10, 245)
-            banner_border = (255, 120, 0, 255)
-            text_color = (255, 140, 30, 255)
+            c.rect(66, y, 328, 34, fill=theme.ROW, radius=10)
+        c.text(80, y + 17, title, 14, theme.AI_D if on else theme.MUTED, True)
+        c.text(380, y + 17, span, 13, theme.AI_D if on else theme.FAINT, False, "rm")
+    c.spaced(230, 478, "AI PREDICTED", 12, theme.FAINT, spacing=3)
+    c.runs(230, 516, [(str(summary.hits), theme.INK), (f" of {summary.predicted_rounds} throws", theme.FAINT)], 30)
 
-        draw.rounded_rectangle([bx - 3, by - 3, bx + banner_w + 3, by + banner_h + 3], radius=20, fill=banner_border)
-        draw.rounded_rectangle([bx, by, bx + banner_w, by + banner_h], radius=18, fill=banner_bg)
+    # How readable
+    c.spaced(640, 168, "HOW READABLE YOU WERE", 12, theme.FAINT, spacing=3)
+    _gauge(c, 640, 366, 130, summary.accuracy)
+    c.text(640, 398, f"{round(summary.accuracy * 100)}%", 36, theme.INK, True, "mm")
+    c.spaced(640, 438, "YOUR THROWS", 12, theme.FAINT, spacing=3)
+    counts = {move: sum(r.player_move == move for r in session.match_log) for move in CHOICES}
+    most = max(1, len(session.match_log))
+    for i, move in enumerate(CHOICES):
+        y = 464 + i * 31
+        _tile(c, 466, y - 14, 28, 28, move, "p", True)
+        c.text(504, y, move, 14, theme.INK2, True)
+        c.rect(590, y - 8, 170, 16, fill=(222, 228, 238), radius=8)
+        if counts[move]:
+            c.rect(590, y - 8, max(10, round(170 * counts[move] / most)), 16, fill=theme.PLAYER, radius=8)
+        c.text(814, y, str(counts[move]), 14, theme.INK2, True, "rm")
 
-        draw.text((bx + banner_w // 2, by + 28), res_title, font=FONT_BANNER, fill=text_color, anchor="mm")
-        draw.text((bx + banner_w // 2, by + 64), res_sub, font=FONT_SUB_BANNER, fill=(220, 230, 240, 255), anchor="mm")
+    # Habits and chart
+    c.spaced(1050, 168, "HABITS IT FOUND", 12, theme.FAINT, spacing=3)
+    line = 190
+    for habit in summary.habits[:3]:
+        line += 30 * c.wrapped(884, line, habit, 16, theme.PLAYER_D, 332, 24, max_lines=3) + 6
+    c.spaced(1050, 340, "HOW THE AI DID, ROUND BY ROUND", 12, theme.FAINT, spacing=2)
+    _chart(c, 892, 372, 316, 110, summary)
+    c.text(1050, 510, "dashed line = chance (33%)", 12, theme.FAINT, False, "mm")
 
-        prompt = "Press [SPACE] to see your match summary" if session.match_complete else "Press [SPACE] for Next Round"
-        _pill(draw, cam_x + cam_w // 2, cam_y + 28, prompt, FONT_LABEL_BOLD, (0, 255, 220, 255), pad=22, height=38)
+    for x, w, label, key, primary in ((284, 220, "Play again", "SPACE", True), (520, 230, "Every round", "R", False),
+                                      (766, 230, "Next player", "N", False)):
+        if primary:
+            c.rect(x, 580, w, 56, fill=theme.PLAYER, radius=14)
+        else:
+            c.rect(x, 580, w, 56, fill=theme.KEY_LINE, radius=14)
+            c.rect(x + 2, 582, w - 4, 52, fill=theme.CARD, radius=12)
+        width = max(26, c.tw(key, 13, True) + 16) + 10 + c.tw(label, 17, True)
+        edge = _keycap(c, x + w / 2 - width / 2, 608, key)
+        c.text(edge + 10, 608, label, 17, theme.WHITE if primary else theme.INK2, True)
+    c.text(640, 672, CREDIT, 13, theme.FAINT, False, "mm")
+    return c
 
-    # -------------------------------------------------------------
-    # D. BOTTOM CONTROLS DOCK (Sleek Glass Dock)
-    # -------------------------------------------------------------
-    dock_h = 46
-    dock_w = min(w - 60, 1080)
-    dx1 = (w - dock_w) // 2
-    dy1 = h - dock_h - 16
-    dx2 = dx1 + dock_w
-    dy2 = dy1 + dock_h
 
-    draw.rounded_rectangle([dx1, dy1, dx2, dy2], radius=14, fill=(15, 17, 24, 225), outline=(50, 60, 80, 255), width=1)
-    
-    controls = [
-        ("[SPACE]", "Play Round"),
-        ("[P]", "Switch Player"),
-        ("[F]", "Fullscreen"),
-        ("[D]", "Toggle AI"),
-        ("[H]", f"Learn: {'ON' if session.learn_mode else 'OFF'}"),
-        ("[R]", "Reset"),
-        ("[Q]", "Quit")
+def _chart(c, x, y, w, h, summary):
+    flags = summary.hit_flags
+    c.dashed_line(x, y + h * 2 / 3, x + w, y + h * 2 / 3, theme.FAINT, 1.5, 6, 6)
+    if not flags:
+        return
+    hits, points = 0, []
+    for i, flag in enumerate(flags):
+        hits += flag
+        px = x + (i * w / (len(flags) - 1) if len(flags) > 1 else w / 2)
+        points.append((px, y + h - h * hits / (i + 1)))
+    if len(points) > 1:
+        c.line(points, theme.AI, 3)
+    for (px, py), flag in zip(points, flags):
+        c.circle(px, py, 5.5, fill=theme.GREEN if flag else theme.AI, outline=theme.CARD, width=2)
+
+
+def _build_replay(c):
+    draw_card(c, 30, 24, 1220, 672)
+
+
+def _replay(session, L, now):
+    c = _begin(L, "replay", _build_replay)
+    c.text(640, 66, "Every round", 34, theme.INK, True, "mm")
+    c.text(640, 104, "What the AI expected, now that the match is over", 17, theme.MUTED, False, "mm")
+    c.rect(60, 128, 1160, 1, fill=theme.CARD_LINE)
+    log = session.match_log
+    per_column = max(1, math.ceil(len(log) / 2))
+    pitch = min(60, 520 / per_column)
+    for i, record in enumerate(log):
+        col, row = divmod(i, per_column)
+        x, y = 60 + col * 580, 144 + row * pitch
+        c.rect(x, y, 540, pitch - 8, fill=theme.ROW, radius=12)
+        mid = y + (pitch - 8) / 2
+        c.text(x + 20, mid, str(i + 1), 18, theme.MUTED, True)
+        size = min(44, pitch - 16)
+        _tile(c, x + 54, mid - size / 2, size, size, record.player_move, "p", True)
+        c.text(x + 114, mid, "vs", 13, theme.FAINT)
+        _tile(c, x + 134, mid - size / 2, size, size, record.ai_move, "ai", True, hanging=True)
+        flag = {"PLAYER": "W", "AI": "L", "TIE": "D"}[record.result]
+        c.circle(x + 212, mid, 12, fill=theme.RESULT_COLORS[flag])
+        c.text(x + 212, mid - 1, flag, 11, theme.WHITE, True, "mm")
+        c.text(x + 246, mid, f"AI expected {record.expected}" if record.expected else "AI was guessing", 15, theme.INK2)
+        if record.expected:
+            hit = record.expected == record.player_move
+            mx, colour = x + 506, theme.GREEN if hit else theme.AI
+            if hit:
+                c.line([(mx - 8, mid), (mx - 2, mid + 7), (mx + 9, mid - 8)], colour, 3.4)
+            else:
+                c.line([(mx - 7, mid - 7), (mx + 7, mid + 7)], colour, 3.4)
+                c.line([(mx - 7, mid + 7), (mx + 7, mid - 7)], colour, 3.4)
+    _hints(c, [("SPACE", "Back to your report")], 672)
+    return c
+
+
+# ---------------------------------------------------------------- 6. overlays
+def _idle_overlay(c, remaining):
+    _dim(c)
+    draw_card(c, 430, 190, 420, 300, accent=theme.PLAYER)
+    c.text(640, 250, "Still there?", 36, theme.INK, True, "mm")
+    c.text(640, 292, "This match will end soon.", 17, theme.MUTED, False, "mm")
+    c.circle(640, 370, 50, fill=theme.TRACK)
+    c.pie(640, 370, 50, -90, -90 + 360 * (remaining / config.IDLE_WARNING_SECONDS), theme.PLAYER)
+    c.circle(640, 370, 42, fill=theme.CARD)
+    c.text(640, 372, str(math.ceil(remaining)), 38, theme.PLAYER, True, "mm")
+    edge = 640 - (c.tw("Show your hand or press", 15) + 8 + max(26, c.tw("any key", 13, True) + 16)) / 2
+    c.text(edge, 452, "Show your hand or press", 15, theme.MUTED)
+    _keycap(c, edge + c.tw("Show your hand or press", 15) + 8, 452, "any key")
+
+
+def _admin_overlay(c, session):
+    _dim(c)
+    draw_card(c, 740, 40, 500, 640, accent=theme.AMBER)
+    c.text(780, 86, "Admin", 28, theme.AMBER_D, True)
+    c.text(1210, 86, "Ctrl+A or ESC to close", 13, theme.MUTED, False, "rm")
+    c.rect(770, 112, 440, 1, fill=theme.CARD_LINE)
+    s = session.settings
+    rounds = "No limit" if s.match_rounds == 0 else str(s.match_rounds)
+    rows = [
+        ("Match length", "Rounds before the report", [str(n) if n else "No limit" for n in config.MATCH_ROUND_CHOICES], rounds),
+        ("Default mode", "What new matches start in", ["Challenge", "Learn"], "Learn" if s.learn_mode else "Challenge"),
+        ("Camera picture", "Skeleton only hides faces completely", ["Full", "Skeleton only"], "Skeleton only" if s.skeleton_only else "Full"),
+        ("Return to start screen", "After this long without a hand", [f"{n} s" for n in config.IDLE_SECOND_CHOICES], f"{s.idle_seconds} s"),
+        ("Leaderboard", "Press 5 twice to clear it", ["Keep", "Clear now"], "Clear now" if session.admin_clear_armed else "Keep"),
     ]
-    step = dock_w // len(controls)
-    for i, (key_label, desc) in enumerate(controls):
-        cx = dx1 + i * step + step // 2
-        text = f"{key_label} {desc}"
-        left, top, right, bottom = draw.textbbox((0, 0), text, font=FONT_LABEL)
-        tw = right - left
-        draw.text((cx - tw // 2, dy1 + 13), text, font=FONT_LABEL, fill=(210, 220, 240, 255))
+    for i, (label, hint, options, current) in enumerate(rows):
+        y = 144 + i * 92
+        _keycap(c, 780, y + 10, str(i + 1))
+        c.text(820, y + 10, label, 18, theme.INK, True)
+        c.text(780, y + 34, hint, 13, theme.MUTED)
+        for k, option in enumerate(options):
+            x, on = 780 + k * 102, option == current
+            c.rect(x, y + 52, 96, 34, fill=theme.PLAYER if on else theme.KEY_LINE, radius=9)
+            if not on:
+                c.rect(x + 1, y + 53, 94, 32, fill=theme.WHITE, radius=8)
+            c.text(x + 48, y + 69, option, 14, theme.WHITE if on else theme.INK2, True, "mm")
+    c.text(780, 636, "Press 1 to 5 to change a setting. Saved straight away.", 14, theme.MUTED)
 
-    final_img = Image.alpha_composite(pil_frame, overlay)
-    return cv2.cvtColor(np.array(final_img.convert("RGB")), cv2.COLOR_RGB2BGR)
+
+def render_camera_problem(w, h, now, retry_in):
+    """Shown when the camera stops sending pictures. The game keeps trying by itself."""
+    L = _layout(w, h)
+    c = _begin(L, "camera-problem", lambda cv: draw_card(cv, 340, 150, 600, 420, accent=theme.AMBER))
+    c.circle(640, 228, 44, fill=theme.AMBER_T, outline=theme.AMBER, width=4)
+    c.text(640, 230, "!", 48, theme.AMBER_D, True, "mm")
+    c.text(640, 318, "Camera problem", 34, theme.INK, True, "mm")
+    c.text(640, 356, "The game lost the picture from the camera.", 18, theme.MUTED, False, "mm")
+    for i, line in enumerate(("Check the cable or the USB port", "Close other apps using the camera (Zoom, Teams)",
+                              "The game keeps trying by itself")):
+        c.text(400, 408 + i * 34, f"{i + 1}   {line}", 18, theme.INK2)
+    _spinner(c, 574, 525, now)
+    c.text(600, 525, f"Retrying… {max(0, math.ceil(retry_in))}", 16, theme.AMBER_D, True)
+    _hints(c, [("Q", "Quit")], 678)
+    return _bgr(c)
+
+
+# ---------------------------------------------------------------- entry point
+def render_ui(session, w, h, now, live_gesture, view):
+    """The whole screen for the session's current state, as a BGR picture of size h x w."""
+    L = _layout(w, h)
+    state = session.state
+    if state == STATE_START:
+        c = _start(session, L, now)
+    elif state == STATE_NAME_INPUT:
+        c = _name(session, L, now)
+    elif state == STATE_CAMERA_CHECK:
+        c = _check_screen(session, L, now, live_gesture, view)
+    elif state == STATE_SUMMARY:
+        c = _summary(session, L, now)
+    elif state == STATE_REPLAY:
+        c = _replay(session, L, now)
+    else:
+        c = _match(session, L, now, live_gesture, view)
+
+    remaining = session.idle_remaining(now)
+    if remaining is not None:
+        _idle_overlay(c, remaining)
+    if session.admin_open:
+        _admin_overlay(c, session)
+    return _bgr(c)

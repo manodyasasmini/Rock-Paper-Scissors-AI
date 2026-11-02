@@ -17,14 +17,26 @@ class HandTracker:
             min_detection_confidence=config.MIN_DETECTION_CONFIDENCE,
             min_tracking_confidence=config.MIN_TRACKING_CONFIDENCE,
         )
+        self.cap = None
+        self.reconnect()
+
+    @property
+    def is_open(self):
+        return self.cap is not None and self.cap.isOpened()
+
+    def reconnect(self):
+        """(Re)open the camera. Returns True if it is working. Safe to call again and again."""
+        if self.cap is not None:
+            self.cap.release()
         self.cap = cv2.VideoCapture(config.CAMERA_INDEX)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, config.CAMERA_WIDTH)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.CAMERA_HEIGHT)
-        if not self.cap.isOpened():
-            raise CameraError("Could not open the camera. Check that it is connected and not used by another app.")
+        return self.is_open
 
     def read(self):
-        """Return the next mirrored frame, or None if the camera stopped."""
+        """Return the next mirrored frame, or None if the camera is missing or stopped."""
+        if not self.is_open:
+            return None
         success, frame = self.cap.read()
         return cv2.flip(frame, 1) if success else None
 
@@ -36,5 +48,6 @@ class HandTracker:
         return [(lm.x, lm.y) for lm in results.multi_hand_landmarks[0].landmark]
 
     def release(self):
-        self.cap.release()
+        if self.cap is not None:
+            self.cap.release()
         self.hands.close()

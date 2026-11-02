@@ -79,3 +79,17 @@ def find_habits(records, limit=3):
 def find_habit(records):
     """The single clearest habit."""
     return find_habits(records, 1)[0]
+
+
+# How readable a player was, by the share of their throws the AI predicted
+TITLES = [("MASTERMIND", "0 – 35%", 35), ("HARD TO READ", "36 – 50%", 50),
+          ("CREATURE OF HABIT", "51 – 65%", 65), ("OPEN BOOK", "66%+", 100)]
+MIN_ROUNDS_FOR_TITLE = 3
+
+
+def title_index(summary):
+    """Index into TITLES, or None when the AI made too few predictions to say."""
+    if summary.predicted_rounds < MIN_ROUNDS_FOR_TITLE:
+        return None
+    percent = round(summary.accuracy * 100)
+    return next(i for i, (_, _, upper) in enumerate(TITLES) if percent <= upper)

@@ -330,8 +330,8 @@ This estimates about 20 FPS for the current game, below the 24 FPS target. UI re
 
 **Done when:** the player says the screen looks right. Cutting the hands out of the artwork worked automatically using the white sticker outline, but I have only seen it on a stand-in camera picture, not your webcam.
 
-### Phase 3: New interface (redesigned in `design/ui-mockup.html`, not built yet)
-Drawn for a busy exhibition stand, so a visitor must get from walking up to the first round in as few steps as possible. 15 screens at the game's real size. Awaiting notes before building.
+### Phase 3: New interface (built)
+Designed in `design/ui-mockup.html` and built in `ui/screens.py`. Drawn for a busy exhibition stand, so a visitor must get from walking up to the first round in as few steps as possible. 15 screens at the game's real size. Awaiting notes before building.
 
 **Decisions**
 - **Three screens before the match:** start screen with the leaderboard (who beat the AI most, best score in a 15-round match), enter name (empty plays as Guest, which is never saved), camera check. The match then starts by itself once a hand is held still for two seconds.
@@ -339,18 +339,18 @@ Drawn for a busy exhibition stand, so a visitor must get from walking up to the 
 - **Learn mode** stays on the `H` key and in the admin settings, instead of a screen of its own. Challenge hides the AI's thinking until the report.
 - **Scores belong to a match.** A profile only keeps what the AI learned about the player, plus their best result for the leaderboard.
 - **Report card at the end:** a title, a gauge against the one-in-three chance mark, throw mix, habits found, leaderboard rank. Play again keeps the name and goes straight to the next match; Next player returns to the start screen.
-- **Colours still to choose.** `design/style-options.html` shows the same screen in five looks (Arcade Night, Warm Paper, Bold Pop, Graphite, Sunset Glass). The light mode was found unconvincing.
+- **Colours chosen** with `design/face-off-colors.html`: teal for the player, red for the AI, a cool grey screen, a pale cloud behind the AI's hand, green and red for results.
 - **"Adaptive AI"** replaces the label "Markov AI", since the AI now blends four predictors.
 - **Credit line** "Created by SMS Abeyrathne · 235501H · BSc (Hons) Artificial Intelligence" on the start screen and the report. The game doesn't mention any event or the university.
 
 **Also drawn:** a missed-round screen, camera problem, hidden admin settings, a "Still there?" prompt, and a design-system sheet.
 
 **Work once the design is approved**
-- [ ] One theme definition for every colour, size and font, so screens don't hardcode them
-- [ ] New game states and flow: start with leaderboard, name, camera check, report, every round
-- [ ] Leaderboard storage (best score per name) and the Guest rule
-- [ ] Rebuild the screens in the chosen look, at any resolution
-- [ ] Performance pass against the 24 FPS target
+- [x] One theme definition for every colour, size and font, so screens don't hardcode them
+- [x] New game states and flow: start with leaderboard, name, camera check, report, every round
+- [x] Leaderboard storage (best score per name) and the Guest rule
+- [x] Rebuild the screens in the chosen look, at any resolution
+- [ ] Performance pass against the 24 FPS target (drawing now takes about 13 ms a frame at 720p; measure the whole loop on the exhibition machine)
 
 **Done when:** it looks like the approved mockup, at target FPS on 720p and 1080p.
 

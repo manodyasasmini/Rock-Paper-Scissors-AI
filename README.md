@@ -84,10 +84,28 @@ An interactive, real-time Computer Vision game that lets you play **Rock-Paper-S
 
 ---
 
-## 🕹️ Controls
+## 🕹️ How a visit works
+
+1. **Start screen:** the leaderboard shows who beat the AI most. Press `SPACE`.
+2. **Your name:** type a name (up to 12 letters) and press `ENTER`. Leave it empty to play as a guest, who is never saved.
+3. **Camera check:** hold your hand up. The match starts by itself after two seconds.
+4. **The match:** 15 rounds. Show rock, paper or scissors on SHOOT! The AI has already locked its move.
+5. **Report card:** a title, how readable you were, the habits it found, and your leaderboard rank.
+
+## 🎛️ Controls
 
 | Key | Action |
 | :---: | :--- |
+| **`[SPACE]`** | Play, start a round, move on |
+| **`[ENTER]`** | Confirm your name |
+| **`[H]`** | Learn mode: show what the AI expected after each round |
+| **`[R]`** | On the report: see every round |
+| **`[N]` / `[P]`** | Next player (back to the start screen) |
+| **`[F]`** | Toggle Fullscreen / Windowed mode |
+| **`[Ctrl+A]`** | Admin settings: match length, default mode, hide the camera picture, idle time, clear the leaderboard |
+| **`[Q]`** | Save and quit game |
+
+---: | :--- |
 | **`[SPACE]`** | Start round / trigger 3-second animated countdown |
 | **`[P]`** | Switch active Player Profile & load individual AI memory |
 | **`[F]`** | Toggle Fullscreen / Windowed mode |

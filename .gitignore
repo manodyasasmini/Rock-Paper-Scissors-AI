@@ -24,3 +24,6 @@ players_data.json.corrupt-*
 
 # Large source artwork; the cut-out icons live in assets/gestures
 rock-paper-scissors-banners-with-hand-gestures/
+
+settings.json
+settings.json.tmp
