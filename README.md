@@ -158,4 +158,4 @@ The tests need no camera: they use made-up hand landmarks and check the game rul
 
 The hand pictures are cut from stock artwork; see `assets/gestures/NOTICE.md`.
 
-Created by **SMS Abeyrathne** · 235501H · BSc (Hons) Artificial Intelligence
+Created by **S.M.S. Abeyrathne** · 235501H · BSc (Hons) Artificial Intelligence

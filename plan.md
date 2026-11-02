@@ -341,7 +341,7 @@ Designed in `design/ui-mockup.html` and built in `ui/screens.py`. Drawn for a bu
 - **Report card at the end:** a title, a gauge against the one-in-three chance mark, throw mix, habits found, leaderboard rank. Play again keeps the name and goes straight to the next match; Next player returns to the start screen.
 - **Colours chosen** with `design/face-off-colors.html`: teal for the player, red for the AI, a cool grey screen, a pale cloud behind the AI's hand, green and red for results.
 - **"Adaptive AI"** replaces the label "Markov AI", since the AI now blends four predictors.
-- **Credit line** "Created by SMS Abeyrathne · 235501H · BSc (Hons) Artificial Intelligence" on the start screen and the report. The game doesn't mention any event or the university.
+- **Credit line** "Created by S.M.S. Abeyrathne · 235501H · BSc (Hons) Artificial Intelligence" on the start screen and the report. The game doesn't mention any event or the university.
 
 **Added after the first build:** an "Is this you?" step when a name is already taken, short sounds (countdown ticks, win/lose/draw, report; switch in Ctrl+A), `Q` only quits from the admin panel, and `tools/make_screenshots.py` for the README and poster pictures.
 

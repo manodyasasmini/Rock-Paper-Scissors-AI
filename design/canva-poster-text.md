@@ -8,7 +8,7 @@ Paste each block into the matching box of the template. Everything below comes f
 
 ## Footer (the template has five member boxes; use one)
 - **TEAM NAME:** (delete, or leave blank)
-- **Member name:** SMS Abeyrathne
+- **Member name:** S.M.S. Abeyrathne
 - **Member index:** 235501H · BSc (Hons) Artificial Intelligence
 - Delete the other four member boxes.
 - **QR:** the GitHub repository for this project.
@@ -55,10 +55,10 @@ Spare pictures in the same folder: `screen-start-leaderboard-2.png`, `screen-eve
 Workflow strip: NAME (join the leaderboard) › CAMERA CHECK (hold your hand up) › COUNTDOWN (AI locks its move) › THROW + REVEAL (gesture read, winner shown) › REPORT (what it learned)
 
 ## PRACTICAL IMPACT, RESULTS & NEXT STEPS
-**Impact:** in about two minutes visitors see how an AI learns from behaviour, and why being unpredictable beats it.
+**Impact:** in a few minutes visitors see how an AI learns from behaviour, and why being unpredictable beats it.
 
 **Results (simulation, 400 games of 30 rounds):** about fair against a random player, and the AI wins 84-91% of rounds against players with a pattern (R-R-P, win-stay/lose-shift, counter-the-AI).
 
 **Expo trial:** add after the expo: number of players, average % of throws the AI predicted.
 
-**Next steps:** tuning the AI on real players, an auto-restart launcher for unattended use, and saving the leaderboard to a file.
+**Next steps:** tuning the AI on real players, an auto-restart launcher for unattended use, and exporting the day's leaderboard.
