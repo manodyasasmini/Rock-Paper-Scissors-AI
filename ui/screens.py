@@ -183,15 +183,18 @@ _hand_cards = {}
 
 
 def _hand_card(L, move, angle):
+    """A tilted hand card. Built three times too big, then shrunk, so the tilted edges come out smooth."""
     key = (L.w, L.h, move)
     if key not in _hand_cards:
-        w, h = L.d(156), L.d(200)
+        ss = 3
+        w, h = L.d(156) * ss, L.d(200) * ss
         card = _gradient(L, w, h, *_HAND_GRADIENTS[move]).convert("RGBA")
-        icon = gesture_icon(move, L.d(164 if move == "ROCK" else 184))
+        icon = gesture_icon(move, L.d(164 if move == "ROCK" else 184) * ss)
         if icon is not None:
-            card.alpha_composite(icon, ((w - icon.width) // 2, h - icon.height + L.d(6)))
-        card.putalpha(aa_mask(w, h, L.d(22)))
-        _hand_cards[key] = card.rotate(angle, resample=Image.BICUBIC, expand=True)
+            card.alpha_composite(icon, ((w - icon.width) // 2, h - icon.height + L.d(6) * ss))
+        card.putalpha(aa_mask(w, h, L.d(22) * ss))
+        big = card.rotate(angle, resample=Image.BICUBIC, expand=True)
+        _hand_cards[key] = big.resize((big.width // ss, big.height // ss), Image.LANCZOS)
     return _hand_cards[key]
 
 
