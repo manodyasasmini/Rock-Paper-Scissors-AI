@@ -1,11 +1,17 @@
-"""Drawing in design units (1280 x 720). The canvas scales everything to the real frame size."""
+"""Drawing in design units (1280 x 720). The canvas scales everything to the real frame size.
+
+Pillow does not smooth the edges of shapes, so every rounded shape, circle, arc and line is drawn through an
+anti-aliased mask: drawn at several times the size, then shrunk.
+"""
 import math
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 from ui import theme
 from ui.theme import get_font
+
+SUPERSAMPLE = 4
 
 
 class Layout:
@@ -44,6 +50,38 @@ def make_background(layout):
     return Image.fromarray(base.astype(np.uint8), "RGB")
 
 
+_masks = {}
+_rings = {}
+_widths = {}
+
+
+def clear_caches():
+    _masks.clear()
+    _rings.clear()
+    _widths.clear()
+
+
+def aa_mask(w, h, radius):
+    """A smooth-edged rounded rectangle, as a greyscale mask."""
+    key = (w, h, radius)
+    if key not in _masks:
+        big = Image.new("L", (w * SUPERSAMPLE, h * SUPERSAMPLE), 0)
+        ImageDraw.Draw(big).rounded_rectangle([0, 0, w * SUPERSAMPLE - 1, h * SUPERSAMPLE - 1],
+                                              radius=radius * SUPERSAMPLE, fill=255)
+        _masks[key] = big.resize((w, h), Image.BOX)
+    return _masks[key]
+
+
+def ring_mask(w, h, radius, width):
+    """Just the outline of a rounded rectangle."""
+    key = (w, h, radius, width)
+    if key not in _rings:
+        inner = Image.new("L", (w, h), 0)
+        inner.paste(aa_mask(w - 2 * width, h - 2 * width, max(0, radius - width)), (width, width))
+        _rings[key] = ImageChops.subtract(aa_mask(w, h, radius), inner)
+    return _rings[key]
+
+
 class Canvas:
     def __init__(self, image, layout):
         self.img = image
@@ -52,29 +90,81 @@ class Canvas:
 
     # ---- shapes ----
     def rect(self, x, y, w, h, fill=None, outline=None, width=1, radius=0):
-        box = self.L.box(x, y, w, h)
-        box = (box[0], box[1], max(box[0] + 1, box[2] - 1), max(box[1] + 1, box[3] - 1))
-        line = self.L.d(width) if outline else 0
-        if radius:
-            self.d.rounded_rectangle(box, radius=self.L.d(radius), fill=fill, outline=outline, width=line)
-        else:
-            self.d.rectangle(box, fill=fill, outline=outline, width=line)
+        x1, y1, x2, y2 = self.L.box(x, y, w, h)
+        pw, ph = max(2, x2 - x1), max(2, y2 - y1)
+        if not radius:
+            self.d.rectangle((x1, y1, x1 + pw - 1, y1 + ph - 1), fill=fill, outline=outline,
+                             width=self.L.d(width) if outline else 0)
+            return
+        r = min(self.L.d(radius), pw // 2, ph // 2)
+        if outline and fill is None:
+            self.img.paste(outline, (x1, y1), ring_mask(pw, ph, r, self.L.d(width)))
+            return
+        self.img.paste(outline or fill, (x1, y1), aa_mask(pw, ph, r))
+        if outline and fill is not None:
+            lw = self.L.d(width)
+            self.img.paste(fill, (x1 + lw, y1 + lw), aa_mask(pw - 2 * lw, ph - 2 * lw, max(0, r - lw)))
+
+    def _paint(self, colour, bounds, draw_fn, ss=3):
+        """Draw a shape smoothly: `draw_fn(draw, to_big, ss)` draws in a layer `ss` times larger than the screen."""
+        x0 = max(0, int(math.floor(bounds[0])) - 2)
+        y0 = max(0, int(math.floor(bounds[1])) - 2)
+        x1 = min(self.img.width, int(math.ceil(bounds[2])) + 2)
+        y1 = min(self.img.height, int(math.ceil(bounds[3])) + 2)
+        if x1 <= x0 or y1 <= y0:
+            return
+        mask = Image.new("L", ((x1 - x0) * ss, (y1 - y0) * ss), 0)
+        draw_fn(ImageDraw.Draw(mask), lambda px, py: ((px - x0) * ss, (py - y0) * ss), ss)
+        self.img.paste(colour, (x0, y0), mask.resize((x1 - x0, y1 - y0), Image.BOX))
 
     def circle(self, cx, cy, r, fill=None, outline=None, width=1):
         L = self.L
-        self.d.ellipse([L.x(cx - r), L.y(cy - r), L.x(cx + r), L.y(cy + r)], fill=fill,
-                       outline=outline, width=L.d(width) if outline else 0)
+        px, py, pr = L.x(cx), L.y(cy), r * L.s
+        bounds = (px - pr, py - pr, px + pr, py + pr)
+
+        def disc(radius, value):
+            return lambda d, tf, ss: d.ellipse([*tf(px - radius, py - radius), *tf(px + radius, py + radius)], fill=value)
+
+        if outline and fill is None:
+            inner = pr - L.d(width)
+            self._paint(outline, bounds, lambda d, tf, ss: (disc(pr, 255)(d, tf, ss), disc(inner, 0)(d, tf, ss)))
+            return
+        self._paint(outline or fill, bounds, disc(pr, 255))
+        if outline and fill is not None:
+            self._paint(fill, bounds, disc(pr - L.d(width), 255))
 
     def arc(self, cx, cy, r, start, end, fill, width):
         L = self.L
-        self.d.arc([L.x(cx - r), L.y(cy - r), L.x(cx + r), L.y(cy + r)], start, end, fill=fill, width=L.d(width))
+        px, py, pr, lw = L.x(cx), L.y(cy), r * L.s, L.d(width)
+        self._paint(fill, (px - pr - 1, py - pr - 1, px + pr + 1, py + pr + 1),
+                    lambda d, tf, ss: d.arc([*tf(px - pr, py - pr), *tf(px + pr, py + pr)], start, end, fill=255, width=lw * ss))
 
     def pie(self, cx, cy, r, start, end, fill):
         L = self.L
-        self.d.pieslice([L.x(cx - r), L.y(cy - r), L.x(cx + r), L.y(cy + r)], start, end, fill=fill)
+        px, py, pr = L.x(cx), L.y(cy), r * L.s
+        self._paint(fill, (px - pr - 1, py - pr - 1, px + pr + 1, py + pr + 1),
+                    lambda d, tf, ss: d.pieslice([*tf(px - pr, py - pr), *tf(px + pr, py + pr)], start, end, fill=255))
 
     def line(self, points, fill, width=1):
-        self.d.line([(self.L.x(px), self.L.y(py)) for px, py in points], fill=fill, width=self.L.d(width), joint="curve")
+        L = self.L
+        pts = [(L.x(px), L.y(py)) for px, py in points]
+        lw = max(1.0, width * L.s)
+
+        def draw(d, tf, ss):
+            big = [tf(*p) for p in pts]
+            d.line(big, fill=255, width=round(lw * ss), joint="curve")
+            for bx, by in big:
+                d.ellipse([bx - lw * ss / 2, by - lw * ss / 2, bx + lw * ss / 2, by + lw * ss / 2], fill=255)
+
+        xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+        self._paint(fill, (min(xs) - lw, min(ys) - lw, max(xs) + lw, max(ys) + lw), draw)
+
+    def polygon(self, points, fill):
+        L = self.L
+        pts = [(L.x(px), L.y(py)) for px, py in points]
+        xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+        self._paint(fill, (min(xs), min(ys), max(xs), max(ys)),
+                    lambda d, tf, ss: d.polygon([tf(*p) for p in pts], fill=255))
 
     def dashed_line(self, x1, y1, x2, y2, fill, width=1, dash=7, gap=7):
         length = math.hypot(x2 - x1, y2 - y1)
@@ -144,38 +234,25 @@ class Canvas:
         self.img.paste(image, (self.L.x(cx) - image.width // 2, self.L.y(top)), image)
 
     def paste_rounded(self, image, x, y, w, h, radius):
-        """Paste an RGB picture already sized to the design rectangle, with rounded corners."""
+        """Paste an RGB picture with smooth rounded corners; it is resized to the design rectangle if needed."""
         x1, y1, x2, y2 = self.L.box(x, y, w, h)
         if image.size != (x2 - x1, y2 - y1):
             image = image.resize((x2 - x1, y2 - y1))
-        mask = _rounded_mask(x2 - x1, y2 - y1, self.L.d(radius))
-        self.img.paste(image, (x1, y1), mask)
-
-
-_masks = {}
-_widths = {}
-
-
-def _rounded_mask(w, h, radius):
-    key = (w, h, radius)
-    if key not in _masks:
-        mask = Image.new("L", (w, h), 0)
-        ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1], radius=radius, fill=255)
-        _masks[key] = mask
-    return _masks[key]
+        self.img.paste(image, (x1, y1), aa_mask(x2 - x1, y2 - y1, self.L.d(radius)))
 
 
 def draw_card(canvas, x, y, w, h, accent=None, glow=None, radius=22, fill=theme.CARD):
     """A card with a soft shadow, an optional coloured top edge and an optional glow ring around it."""
     L = canvas.L
     x1, y1, x2, y2 = L.box(x, y, w, h)
+    cw, ch = x2 - x1, y2 - y1
     pad = L.d(44)
-    size = (x2 - x1 + 2 * pad, y2 - y1 + 2 * pad)
+    size = (cw + 2 * pad, ch + 2 * pad)
     r = L.d(radius)
 
     def soft(blur, strength, colour, dy):
         mask = Image.new("L", size, 0)
-        ImageDraw.Draw(mask).rounded_rectangle([pad, pad, pad + x2 - x1, pad + y2 - y1], radius=r, fill=255)
+        mask.paste(aa_mask(cw, ch, r), (pad, pad))
         mask = mask.filter(ImageFilter.GaussianBlur(L.d(blur))).point(lambda v: int(v * strength))
         canvas.img.paste(Image.new("RGB", size, colour), (x1 - pad, y1 - pad + L.d(dy)), mask)
 
@@ -183,9 +260,11 @@ def draw_card(canvas, x, y, w, h, accent=None, glow=None, radius=22, fill=theme.
     if glow:
         soft(16, 0.55, glow, 0)
         ring = L.d(4)
-        canvas.d.rounded_rectangle([x1 - ring, y1 - ring, x2 + ring, y2 + ring], radius=r + ring, fill=glow)
+        canvas.img.paste(glow, (x1 - ring, y1 - ring), aa_mask(cw + 2 * ring, ch + 2 * ring, r + ring))
     if accent:
-        canvas.d.rounded_rectangle([x1, y1, x2, y2], radius=r, fill=accent)
-        canvas.d.rounded_rectangle([x1, y1 + L.d(6), x2, y2], radius=r, fill=fill)
+        edge = L.d(6)
+        canvas.img.paste(accent, (x1, y1), aa_mask(cw, ch, r).crop((0, 0, cw, r + edge * 2)))
+        canvas.img.paste(fill, (x1, y1 + edge), aa_mask(cw, ch - edge, r))
     else:
-        canvas.d.rounded_rectangle([x1, y1, x2, y2], radius=r, fill=fill, outline=theme.CARD_LINE, width=1)
+        canvas.img.paste(theme.CARD_LINE, (x1, y1), aa_mask(cw, ch, r))
+        canvas.img.paste(fill, (x1 + 1, y1 + 1), aa_mask(cw - 2, ch - 2, max(0, r - 1)))

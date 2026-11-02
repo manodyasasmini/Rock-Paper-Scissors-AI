@@ -31,6 +31,7 @@ AI_DECAY = 0.95            # each round, old observations count this much less (
 AI_SMOOTHING = 0.5         # pseudo-count per move; keeps estimates near 1/3 until there is real evidence
 AI_SCORE_FORGET = 0.9      # how fast an expert's track record fades
 AI_TRUST_SHARPNESS = 3.0   # how strongly the AI favours the better-performing expert
+AI_CLEAR_MARGIN = 0.08     # the AI only claims to "expect" a move when it leads the next best by this much
 AI_SOFTMAX_K = 8.0         # higher = the AI commits harder to its best move; lower = more random
 # Evidence = decayed observations behind the lead prediction. Measured in simulation: accuracy jumps
 # from about 53% to 78% at 2 observations and levels off near 80% from about 5.

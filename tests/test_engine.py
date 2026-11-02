@@ -3,6 +3,8 @@ import random
 
 import pytest
 
+import config
+
 from ai.engine import (CHOICES, COUNTERS, EXPERT_FREQUENCY, EXPERT_LAST_TWO, MODE_RANDOM, AdaptiveEngine,
                        explain, outcome_for_player)
 
@@ -189,7 +191,7 @@ def test_explanation_when_the_player_broke_the_pattern():
 
 def test_a_missed_guess_with_little_evidence_is_not_called_a_broken_pattern():
     engine = make_engine()
-    feed(engine, ["ROCK", "PAPER"])
+    feed(engine, ["ROCK", "ROCK"])
     prediction = engine.lock_move()
     assert prediction.evidence == "LOW"
     sentence = explain(prediction, "SCISSORS" if prediction.expected != "SCISSORS" else "ROCK")
@@ -208,3 +210,21 @@ def test_explanations_for_special_cases():
 def test_a_guess_has_no_expected_move():
     prediction = make_engine().lock_move()
     assert prediction.expected is None and prediction.reason == ""
+
+
+def test_with_no_standout_move_the_ai_only_guesses_and_says_so():
+    """Expecting PAPER at 34% against 33% each would be a coin toss: don't claim a prediction."""
+    engine = make_engine()
+    prediction = engine.lock_move()
+    prediction.top_expert, prediction.expected = "Frequency", None
+    assert "No move stood out" in explain(prediction, "PAPER")
+
+    feed(engine, ["ROCK", "PAPER", "SCISSORS", "ROCK", "PAPER", "SCISSORS"])
+    flat = engine.lock_move()
+    top, second = sorted(flat.probs.values(), reverse=True)[:2]
+    assert (top - second < config.AI_CLEAR_MARGIN) == (flat.expected is None)
+
+
+def test_a_clear_expectation_also_says_what_the_ai_played():
+    sentence = explain(pattern_engine().lock_move(), "ROCK")
+    assert "so it played" in sentence

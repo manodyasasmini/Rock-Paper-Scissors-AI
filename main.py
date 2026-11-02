@@ -9,12 +9,25 @@ from game.session import ACTION_QUIT, ACTION_TOGGLE_FULLSCREEN, GameSession
 from game.settings import Settings
 from game.store import PlayerStore
 from ui.camera import render_camera
-from ui.screens import camera_size, render_camera_problem, render_ui
+from ui.screens import camera_size, clear_caches, render_camera_problem, render_ui
 from vision.gesture import GestureSmoother, detect_gesture
 from vision.tracker import HandTracker
 
 NO_KEY = 255
 CAMERA_RETRY_SECONDS = 3.0
+MAX_CANVAS = (1920, 1080)   # draw at the screen's own size so nothing is stretched, but no bigger than this
+
+
+def canvas_size(fallback):
+    """The size of the window's picture area in pixels, so the screens are drawn at full sharpness."""
+    try:
+        _, _, w, h = cv2.getWindowImageRect(config.WINDOW_NAME)
+    except cv2.error:
+        return fallback
+    if w < 480 or h < 270:
+        return fallback
+    shrink = min(1.0, MAX_CANVAS[0] / w, MAX_CANVAS[1] / h)
+    return int(w * shrink) // 2 * 2, int(h * shrink) // 2 * 2
 
 
 def main():
@@ -28,6 +41,7 @@ def main():
     is_fullscreen = True
     size = (config.CAMERA_WIDTH, config.CAMERA_HEIGHT)
     next_retry = 0.0
+    frames = 0
 
     print("==========================================")
     print("  Rock Paper Scissors AI                  ")
@@ -50,8 +64,13 @@ def main():
                     break
                 continue
             next_retry = 0.0
-            height, width = frame.shape[:2]
-            size = (width, height)
+            frames += 1
+            if frames % 15 == 1:
+                new_size = canvas_size((frame.shape[1], frame.shape[0]))
+                if new_size != size:
+                    size = new_size
+                    clear_caches()
+            width, height = size
 
             live_gesture = None
             view = None

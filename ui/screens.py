@@ -14,7 +14,8 @@ from game.session import (STATE_CAMERA_CHECK, STATE_COUNTDOWN, STATE_IDLE, STATE
                           STATE_SHOW_RESULT, STATE_START, STATE_SUMMARY)
 from game.summary import TITLES, title_index
 from ui import theme
-from ui.canvas import Canvas, Layout, draw_card, make_background
+from ui import canvas as canvas_module
+from ui.canvas import Canvas, Layout, aa_mask, draw_card, make_background
 from ui.gestures import gesture_icon
 
 CREDIT = "Created by SMS Abeyrathne · 235501H · BSc (Hons) Artificial Intelligence"
@@ -39,6 +40,13 @@ def camera_size(state, w, h):
     x, y, pw, ph = CHECK_CAM if state == STATE_CAMERA_CHECK else MATCH_CAM
     x1, y1, x2, y2 = _layout(w, h).box(x, y, pw, ph)
     return x2 - x1, y2 - y1
+
+
+def clear_caches():
+    """Forget everything drawn for the old frame size, e.g. after the window is resized."""
+    for cache in (_backgrounds, _static, _layouts, _hand_cards):
+        cache.clear()
+    canvas_module.clear_caches()
 
 
 def _begin(L, key, build=None):
@@ -182,10 +190,7 @@ def _hand_card(L, move, angle):
         icon = gesture_icon(move, L.d(164 if move == "ROCK" else 184))
         if icon is not None:
             card.alpha_composite(icon, ((w - icon.width) // 2, h - icon.height + L.d(6)))
-        mask = Image.new("L", (w, h), 0)
-        from PIL import ImageDraw
-        ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1], radius=L.d(22), fill=255)
-        card.putalpha(mask)
+        card.putalpha(aa_mask(w, h, L.d(22)))
         _hand_cards[key] = card.rotate(angle, resample=Image.BICUBIC, expand=True)
     return _hand_cards[key]
 
@@ -333,25 +338,22 @@ def _learn_panel(c, session):
     evidence_colors = {"LOW": theme.AMBER_D, "MEDIUM": theme.PLAYER_D, "HIGH": theme.GREEN_D}
     c.text(x + 206, y + 18, f"EVIDENCE: {prediction.evidence}", 12, evidence_colors[prediction.evidence], True)
     c.wrapped(x + 206, y + 42, session.explanation, 13.5, theme.INK2, 194, 17, max_lines=6)
-    if prediction.expected is None:
-        c.text(x + 100, y + 70, "NO PATTERN YET", 17, theme.MUTED, True, "mm")
-        return
     base, max_h = y + 106, 68
+    chance_y = base - max_h / 3
+    c.dashed_line(x + 8, chance_y, x + 166, chance_y, theme.FAINT, 1.5, 5, 4)
+    c.text(x + 200, chance_y, "chance", 10, theme.FAINT, False, "rm")
     top = prediction.expected
     for i, move in enumerate(CHOICES):
-        bx = x + 16 + i * 60
+        bx = x + 12 + i * 56
         probability = prediction.probs[move]
         bar_h = max(6, round(max_h * probability))
         thrown = move == session.player_move
         if thrown:
             c.rect(bx - 3, base - bar_h - 3, 50, bar_h + 6, fill=theme.PLAYER, radius=10)
         c.rect(bx, base - bar_h, 44, bar_h, fill=theme.AI if move == top else theme.AI_L, radius=8)
+        c.rect(bx + 4, base - bar_h - 21, 36, 18, fill=theme.AI_T)
         c.text(bx + 22, base - bar_h - 12, f"{round(probability * 100)}%", 13, theme.INK2, True, "mm")
         c.text(bx + 22, base + 14, move.capitalize(), 11, theme.PLAYER if thrown else theme.MUTED, True, "mm")
-    chance_y = base - max_h / 3
-    c.dashed_line(x + 8, chance_y, x + 198, chance_y, theme.FAINT, 1.5, 5, 4)
-    c.rect(x + 166, chance_y - 7, 32, 14, fill=theme.AI_T)
-    c.text(x + 198, chance_y, "chance", 10, theme.FAINT, False, "rm")
 
 
 def _pips(c, flags, total, current):
@@ -510,7 +512,7 @@ def _middle(c, session, now, valid):
     else:
         c.text(640, 254, "GET READY", 28, theme.INK, True, "mm")
         c.circle(640, 332, 56, fill=theme.PLAYER)
-        c.d.polygon([(c.L.x(626), c.L.y(308)), (c.L.x(626), c.L.y(356)), (c.L.x(668), c.L.y(332))], fill=theme.WHITE)
+        c.polygon([(626, 308), (626, 356), (668, 332)], theme.WHITE)
         group = c.tw("Press", 15) + 6 + max(26, c.tw("SPACE", 13, True) + 16)
         c.text(640 - group / 2, 420, "Press", 15, theme.MUTED)
         _keycap(c, 640 - group / 2 + c.tw("Press", 15) + 6, 420, "SPACE")

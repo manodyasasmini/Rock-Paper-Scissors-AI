@@ -63,12 +63,14 @@ def explain(prediction, player_move):
     if prediction.top_expert == "Random":
         return "Random mode: the AI just guessed."
     if prediction.expected is None:
-        return "First throw of this session: the AI had nothing to go on, so it guessed."
+        if prediction.top_expert == "No history yet":
+            return "First throw of this session: the AI had nothing to go on, so it guessed."
+        return "No move stood out in your throws yet, so the AI played almost at random."
 
     percent = round(prediction.probs[prediction.expected] * 100)
     early = ", an early guess" if prediction.evidence == "LOW" else ""
     why = f" because {prediction.reason}" if prediction.reason else " from a mix of your habits"
-    sentence = f"The AI expected {prediction.expected} ({percent}%{early}){why}."
+    sentence = f"The AI expected {prediction.expected} ({percent}%{early}){why}, so it played {prediction.ai_move}."
     if player_move == prediction.expected:
         return sentence + " You threw it."
     sentence += f" But you threw {player_move}."
@@ -150,9 +152,12 @@ class AdaptiveEngine:
         evidence = ("HIGH" if samples >= config.EVIDENCE_HIGH
                     else "MEDIUM" if samples >= config.EVIDENCE_MEDIUM else "LOW")
         probs = {move: float(blended[i]) for i, move in enumerate(CHOICES)}
-        expected = max(CHOICES, key=lambda move: probs[move])
+        ranked = sorted(CHOICES, key=lambda move: -probs[move])
+        expected = ranked[0]
         own_pick = CHOICES[int(np.argmax(found[top][0]))]
         reason = self._reason(top, found[top][0]) if own_pick == expected else ""
+        if probs[ranked[0]] - probs[ranked[1]] < config.AI_CLEAR_MARGIN:
+            expected, reason = None, ""   # no move stands out, so the AI is only guessing
         return Prediction(probs, evidence, top, self._choose(blended), weights, samples, expected, reason)
 
     def _reason(self, expert, probs):
