@@ -330,17 +330,26 @@ This estimates about 20 FPS for the current game, below the 24 FPS target. UI re
 
 **Done when:** the player says the screen looks right. Cutting the hands out of the artwork worked automatically using the white sticker outline, but I have only seen it on a stand-in camera picture, not your webcam.
 
-### Phase 3: New interface (design decided, not built yet)
-Decisions so far, from reviewing `design/ui-mockup.html`:
-- **Light mode.** Soft white background, white cards, deep blue for the player and rose for the AI. The older dark neon look is dropped.
-- **Dark where the artwork needs it.** The three move tiles and the AI's panel stay dark (navy and purple), because the hand pictures have white outlines and were drawn for dark backgrounds. They stand out well against the light screen.
-- **Camera skeleton** is drawn in blue over a white halo, so it shows on any room.
-- **Credit line:** "Created by SMS Abeyrathne · 235501H · BSc (Hons) Artificial Intelligence" on the start screen and under the match summary. The game itself doesn't mention any event or the university.
-- **Still to decide:** which suggested screens to build (start screen, camera check, chant countdown, round-by-round, leaderboard, camera problem, admin, privacy mode) and which arrangement of the main screen to use. Waiting for notes on the mockup.
+### Phase 3: New interface (redesigned in `design/ui-mockup.html`, not built yet)
+The whole interface was redesigned from scratch, with 19 screens drawn at the game's real size. Awaiting notes before building.
 
-Work once the design is final:
-- [ ] Move every colour into one theme definition, so screens don't hardcode them
-- [ ] Rebuild the screens in light mode, at any resolution
+**Decisions**
+- **Face-off layout.** The player's camera on the left, the AI on the right, and the score, round, big countdown and a track of 15 dots in the middle. The reveal happens in the middle, with both hands face to face and the winner's card glowing.
+- **No typing to get in.** Start screen, then "Who's playing?": Quick play (a guest, nothing saved), Pick a player (a list with stats and what the AI has noticed), or New player (an automatic nickname such as "Swift Fox", editable). This replaces the typed name box and the "welcome back / resume" question.
+- **Choose Challenge or Learn at the start** of a match, instead of the hidden `H` key. Challenge hides the AI's thinking until the report. Learn shows what it expected after every round.
+- **Scores belong to a match.** No resumed running totals. A profile only keeps what the AI learned, plus stats such as matches played and the lowest AI accuracy.
+- **A report card at the end:** a title (Mastermind, Hard to read, Creature of habit, Open book), a gauge against the one-in-three chance mark, the player's throw mix, the habits found, and a chart of the AI's accuracy. "Every round" and "Leaderboard" hang off it.
+- **Light screens, dark where the art needs it.** The move tiles and the AI's panel stay dark so the hand pictures stand out. Blue means the player and rose means the AI, and nothing else uses them.
+- **"Adaptive AI"** replaces the label "Markov AI", since the AI now blends four predictors.
+- **Credit line** "Created by SMS Abeyrathne · 235501H · BSc (Hons) Artificial Intelligence" on the start screen and the report. The game doesn't mention any event or the university.
+
+**Also drawn:** a warm-up that teaches the gestures, a missed-round screen, camera problem, hidden admin settings, a "Still there?" prompt, and a design-system sheet.
+
+**Work once the design is approved**
+- [ ] One theme definition for every colour, size and font, so screens don't hardcode them
+- [ ] New game states and flow: start, who's playing, pick player, new player, warm-up, choose match, report, every round, leaderboard
+- [ ] Profile data: stats (matches played, lowest AI accuracy), nickname generator, leaderboard storage
+- [ ] Rebuild the screens in the new light face-off layout, at any resolution
 - [ ] Performance pass against the 24 FPS target
 
 **Done when:** it looks like the approved mockup, at target FPS on 720p and 1080p.
