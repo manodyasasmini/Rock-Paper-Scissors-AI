@@ -44,7 +44,7 @@ Webcam → OpenCV (capture and mirror) → MediaPipe Hands (21 landmarks) → Ge
 Caption: Camera frame → hand landmarks → move → game → AI reply (locked before the throw is read).
 
 ## DEMO / KEY SCREENS / WORKFLOW
-Pictures (in `demo/`): `05-ready.png`, `07-you-win.png`, `10-learn-mode.png`, `12-report.png`
+Pictures (laptop-framed, transparent, in `design/poster-assets/`): `laptop-05-ready.png`, `laptop-07-you-win.png`, `laptop-10-learn-mode.png`, `laptop-12-report.png`
 - Ready: live camera with the hand skeleton and the match score.
 - Reveal: the AI's hand against yours. Its thinking stays hidden during play.
 - Learn mode: what the AI expected, with the one-in-three chance line.
