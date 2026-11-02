@@ -44,11 +44,13 @@ Webcam → OpenCV (capture and mirror) → MediaPipe Hands (21 landmarks) → Ge
 Caption: Camera frame → hand landmarks → move → game → AI reply (locked before the throw is read).
 
 ## DEMO / KEY SCREENS / WORKFLOW
-Pictures (screen-framed, transparent, in `design/poster-assets/`): `screen-05-ready.png`, `screen-07-you-win.png`, `screen-10-learn-mode.png`, `screen-12-report.png`
-- Ready: live camera with the hand skeleton and the match score.
-- Reveal: the AI's hand against yours. Its thinking stays hidden during play.
-- Learn mode: what the AI expected, with the one-in-three chance line.
-- Report card: a title, how well the AI read you, and the habits it found.
+Pictures (your real screenshots in a screen frame, transparent PNG, in `design/poster-assets/screens/`):
+- `screen-camera-check.png`: Camera check: live camera with the hand skeleton, until everything is ticked.
+- `screen-you-win.png`: Reveal: the AI's hand against yours. Its thinking stays hidden during play.
+- `screen-learn-mode.png`: Learn mode: what the AI expected, with the one-in-three chance line.
+- `screen-report.png`: Report card: a title, how well the AI read you, and the habits it found.
+
+Spare pictures in the same folder: `screen-start-leaderboard-2.png`, `screen-every-round.png`, `screen-is-this-you.png`, `screen-draw.png`, `screen-ai-wins.png`.
 
 Workflow strip: NAME (join the leaderboard) › CAMERA CHECK (hold your hand up) › COUNTDOWN (AI locks its move) › THROW + REVEAL (gesture read, winner shown) › REPORT (what it learned)
 
