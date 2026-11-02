@@ -23,7 +23,7 @@ GESTURE_WINDOW = 10
 GESTURE_MIN_VOTES = 6
 
 # Hand skeleton colours (BGR, since the camera picture is drawn with OpenCV)
-VIEW_PLAYER = (136, 148, 13)    # teal #0D9488
+VIEW_PLAYER = (216, 79, 59)    # royal blue #3B4FD8
 VIEW_NODE = (255, 255, 255)
 
 # AI engine. Tuned with `python -m ai.simulate` against scripted players; re-tune after real play-tests.

@@ -23,6 +23,7 @@ CREDIT = "Created by SMS Abeyrathne · 235501H · BSc (Hons) Artificial Intellig
 # Where things sit in the design (1280 x 720)
 MATCH_CAM = (44, 86, 408, 382)
 CHECK_CAM = (60, 156, 640, 440)
+ROCK_SCALE = 0.84   # the rock artwork is bigger than the others, so it is drawn smaller to match
 
 _backgrounds = {}
 _static = {}
@@ -111,9 +112,11 @@ def _tile(c, x, y, w, h, move, side, lit, dim=False, hanging=False):
         c.rect(x, y, w, h, fill=theme.TILE_LINE, radius=14)
         c.rect(x + 1, y + 1, w - 2, h - 2, fill=theme.TILE, radius=13)
     height = c.L.d(h - 10)
-    icon = gesture_icon(move, height, opacity=1.0 if lit else (0.34 if dim else 0.62), upside_down=hanging)
+    shown = round(height * ROCK_SCALE) if move == "ROCK" else height
+    icon = gesture_icon(move, shown, opacity=1.0 if lit else (0.34 if dim else 0.62), upside_down=hanging)
     if icon is not None:
-        c.paste_centered(icon, x + w / 2, y + (2 if hanging else 6))
+        # Upright hands rise from the bottom of the tile, hanging ones from the top
+        c.paste_centered(icon, x + w / 2, y + 2 + (0 if hanging else 4 + (height - shown) / c.L.s))
     else:
         c.text(x + w / 2, y + h / 2, move[0], 28, theme.WHITE if lit else theme.FAINT, True, "mm")
 
@@ -177,8 +180,8 @@ def _dim(c, strength=0.45):
 
 
 # ---------------------------------------------------------------- 1. start screen
-_HAND_GRADIENTS = {"ROCK": ((15, 118, 110), (19, 78, 74)), "PAPER": ((71, 85, 105), (15, 23, 42)),
-                   "SCISSORS": ((159, 29, 29), (63, 13, 13))}
+_HAND_GRADIENTS = {"ROCK": ((59, 79, 216), (23, 30, 90)), "PAPER": ((71, 85, 105), (15, 23, 42)),
+                   "SCISSORS": ((244, 63, 94), (96, 18, 40))}
 _hand_cards = {}
 
 
@@ -189,7 +192,7 @@ def _hand_card(L, move, angle):
         ss = 3
         w, h = L.d(156) * ss, L.d(200) * ss
         card = _gradient(L, w, h, *_HAND_GRADIENTS[move]).convert("RGBA")
-        icon = gesture_icon(move, L.d(164 if move == "ROCK" else 184) * ss)
+        icon = gesture_icon(move, L.d(142 if move == "ROCK" else 184) * ss)
         if icon is not None:
             card.alpha_composite(icon, ((w - icon.width) // 2, h - icon.height + L.d(6) * ss))
         card.putalpha(aa_mask(w, h, L.d(22) * ss))
@@ -323,8 +326,8 @@ def _check_screen(session, L, now, live_gesture, view):
 # ---------------------------------------------------------------- 4. the match
 def _build_match(win):
     def build(c):
-        draw_card(c, 28, 24, 440, 616, accent=theme.PLAYER, glow=theme.GREEN if win == "p" else None)
-        draw_card(c, 812, 24, 440, 616, accent=theme.AI, glow=theme.GREEN if win == "a" else None)
+        draw_card(c, 28, 24, 440, 616, accent=theme.PLAYER)
+        draw_card(c, 812, 24, 440, 616, accent=theme.AI)
         draw_card(c, 500, 46, 280, 560)
         x, y, w, h = 828, 86, 408, 382
         panel = _gradient(c.L, c.L.d(w), c.L.d(h), theme.CLOUD_TOP, theme.CLOUD_BOTTOM)
@@ -422,7 +425,7 @@ def _match(session, L, now, live_gesture, view):
     else:
         _chip(c, 1236, 56, "Challenge", theme.MUTED, theme.CHIP, dot=True)
     if valid:
-        icon = gesture_icon(session.ai_move, L.d(374), upside_down=True)
+        icon = gesture_icon(session.ai_move, L.d(374 * (ROCK_SCALE if session.ai_move == "ROCK" else 1)), upside_down=True)
         if icon is not None:
             c.paste_centered(icon, 1032, 90)
         else:
@@ -491,7 +494,7 @@ def _middle(c, session, now, valid):
         c.runs(640, 424, parts, 12.5)
     elif state == STATE_SHOW_RESULT and valid:
         kind = session.round_result
-        title, colour = {"PLAYER": ("YOU WIN!", theme.GREEN_D), "AI": ("AI WINS", theme.AI_D),
+        title, colour = {"PLAYER": ("YOU WIN!", theme.GREEN_D), "AI": ("AI WINS", theme.RED_D),
                          "TIE": ("DRAW", theme.AMBER_D)}[kind]
         c.text(640, 250, title, 34, colour, True, "mm")
         _tile(c, 522, 274, 104, 120, session.player_move, "p", True)
@@ -562,7 +565,7 @@ def _summary(session, L, now):
     c = _begin(L, "summary", _build_summary)
     c.spaced(60, 52, "MATCH COMPLETE", 13, theme.FAINT, spacing=3, anchor="l")
     c.text(60, 84, (session.player_name or "").upper(), 30, theme.PLAYER, True)
-    headline_colour = {"YOU WIN": theme.GREEN_D, "AI WINS": theme.AI_D, "DRAW": theme.AMBER_D}[summary.headline]
+    headline_colour = {"YOU WIN": theme.GREEN_D, "AI WINS": theme.RED_D, "DRAW": theme.AMBER_D}[summary.headline]
     c.text(640, 58, summary.headline, 44, headline_colour, True, "mm")
     draws = f" · {summary.ties} draw{'s' if summary.ties != 1 else ''}" if summary.ties else ""
     c.text(640, 100, f"{summary.wins} – {summary.losses}{draws}", 17, theme.MUTED, False, "mm")
@@ -646,7 +649,7 @@ def _chart(c, x, y, w, h, summary):
     if len(points) > 1:
         c.line(points, theme.AI, 3)
     for (px, py), flag in zip(points, flags):
-        c.circle(px, py, 5.5, fill=theme.GREEN if flag else theme.AI, outline=theme.CARD, width=2)
+        c.circle(px, py, 5.5, fill=theme.GREEN if flag else theme.RED, outline=theme.CARD, width=2)
 
 
 def _build_replay(c):
@@ -677,7 +680,7 @@ def _replay(session, L, now):
         c.text(x + 246, mid, f"AI expected {record.expected}" if record.expected else "AI was guessing", 15, theme.INK2)
         if record.expected:
             hit = record.expected == record.player_move
-            mx, colour = x + 506, theme.GREEN if hit else theme.AI
+            mx, colour = x + 506, theme.GREEN if hit else theme.RED
             if hit:
                 c.line([(mx - 8, mid), (mx - 2, mid + 7), (mx + 9, mid - 8)], colour, 3.4)
             else:

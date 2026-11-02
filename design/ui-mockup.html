@@ -64,8 +64,8 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;align-
 @media (max-width:1100px){.layout{grid-template-columns:1fr}nav{display:none}.body{grid-template-columns:1fr}}
 
 /* ---------- the 1280 x 720 stage ---------- */
-.stage{--p:#0d9488;--a:#dc2626;position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;overflow:hidden;
-  background:radial-gradient(circle at 10% 6%,rgba(13,148,136,.12),transparent 38%),radial-gradient(circle at 92% 94%,rgba(220,38,38,.07),transparent 40%),#e3e7ee;
+.stage{--p:#3b4fd8;--a:#f43f5e;position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;overflow:hidden;
+  background:radial-gradient(circle at 10% 6%,rgba(59,79,216,.12),transparent 38%),radial-gradient(circle at 92% 94%,rgba(244,63,94,.08),transparent 40%),#e3e7ee;
   font-family:"Segoe UI",system-ui,sans-serif;color:#14213d}
 .stage *{box-sizing:border-box}
 .a{position:absolute}
@@ -73,8 +73,6 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;align-
 .card{background:#f6f8fb;border-radius:22px;border:1px solid #d3d9e3;box-shadow:0 10px 28px rgba(31,41,55,.14)}
 .card.p{border-top:6px solid var(--p)}
 .card.ai{border-top:6px solid var(--a)}
-.card.win-p{box-shadow:0 0 0 4px rgba(22,163,74,.35),0 12px 36px rgba(22,163,74,.25)}
-.card.win-a{box-shadow:0 0 0 4px rgba(22,163,74,.35),0 12px 36px rgba(22,163,74,.25)}
 .chip{display:flex;align-items:center;gap:7px;padding:0 12px;border-radius:999px;font-size:14px;font-weight:600;white-space:nowrap}
 .dot{width:9px;height:9px;border-radius:50%;flex:none}
 .cam{overflow:hidden;border-radius:16px;background:#222}
@@ -87,13 +85,13 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;align-
 .tile img{position:absolute;left:50%;top:6px;transform:translateX(-50%);opacity:.34}
 .tile.none img{opacity:.62}
 .tile.lit img{opacity:1}
-.tile.lit.p{border:3px solid var(--p);background:#134e4a}
-.tile.lit.ai{border:3px solid var(--a);background:#4c1d1d}
+.tile.lit.p{border:3px solid var(--p);background:#1e296e}
+.tile.lit.ai{border:3px solid var(--a);background:#601228}
 .ribbon{display:grid;place-items:center;border-radius:999px;background:#16a34a;color:#fff;font:800 13px "Segoe UI",sans-serif;letter-spacing:2px;box-shadow:0 4px 12px rgba(22,163,74,.4)}
 .sc{border-radius:16px;border:2px solid}
 .pip{display:grid;place-items:center;border-radius:50%;font:700 11px "Segoe UI",sans-serif;color:#fff}
 .btnx{display:flex;align-items:center;justify-content:center;gap:10px;border-radius:14px;font-weight:700;font-size:17px;border:2px solid #cdd5e6;background:#fff;color:#33415f}
-.btnx.pri{background:var(--p);border-color:var(--p);color:#fff;box-shadow:0 8px 20px rgba(13,148,136,.3)}
+.btnx.pri{background:var(--p);border-color:var(--p);color:#fff;box-shadow:0 8px 20px rgba(59,79,216,.3)}
 .hint{display:flex;gap:26px;align-items:center;justify-content:center;font-size:15px;color:#5a6785}
 .kc{display:inline-block;min-width:26px;padding:2px 8px;border:1px solid #cdd5e6;border-bottom-width:3px;border-radius:8px;background:#fff;font-weight:700;color:#33415f;font-size:13px;text-align:center}
 .step{display:flex;align-items:center;gap:12px;border-radius:16px;background:#fff;border:1px solid #e1e6f2;padding:0 16px;font-size:17px;font-weight:600;color:#33415f;box-shadow:0 4px 14px rgba(20,33,61,.06)}
@@ -119,7 +117,7 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;align-
     <div class="note"><b>3. Face-off layout</b><span>You on the left, the AI on the right, and the score, countdown and match progress in the middle. The reveal happens where both eyes land.</span></div>
     <div class="note"><b>4. Quick turnaround</b><span>A match is 15 rounds, about two minutes. After it, Play again keeps your name, and Next player returns to the leaderboard.</span></div>
     <div class="note"><b>5. A report card at the end</b><span>A title, a gauge against the one-in-three chance mark, your throw mix and the habits it found.</span></div>
-    <div class="note"><b>6. Colours</b><span>Teal is you, red is the AI, on a cool grey screen with a pale cloud behind the AI's hand. Green and red are also used for wins and losses.</span></div>
+    <div class="note"><b>6. Colours</b><span>Blue is you, rose is the AI, on a cool grey screen with a pale cloud behind the AI's hand. Green and red are also used for wins and losses.</span></div>
   </div>
   </header>
 
@@ -138,7 +136,7 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;align-
 <script>
 /* ============================ palette and helpers ============================ */
 const K = {bg:"#e3e7ee",ink:"#1f2937",ink2:"#374151",muted:"#5b6575",faint:"#8a93a3",line:"#d3d9e3",
-  p:"#0d9488",pD:"#0f766e",pT:"#d7f0ee",pL:"#7cc7bf",a:"#dc2626",aD:"#b91c1c",aT:"#fdeaea",aL:"#f3a6a6",
+  p:"#3b4fd8",pD:"#2e3eb8",pT:"#e2e6fc",pL:"#9aa6ee",a:"#f43f5e",aD:"#be123c",aT:"#fee4e9",aL:"#fba3b0",
   green:"#16a34a",greenD:"#0f7a37",greenT:"#e3f6e9",red:"#dc2626",redD:"#b01919",redT:"#fdeaea",
   amber:"#f59e0b",amberD:"#9a5b00",amberT:"#fff3d6",navy:"#1f2937"};
 const CH = {W:K.green,L:K.red,D:K.amber};
@@ -147,7 +145,7 @@ const IMG = {ROCK:"../assets/gestures/rock.png", PAPER:"../assets/gestures/paper
 const MOVES = ["ROCK","PAPER","SCISSORS"];
 const BEATS = {ROCK:"SCISSORS", PAPER:"ROCK", SCISSORS:"PAPER"};
 const outcome = (p,a) => p===a ? "D" : (BEATS[p]===a ? "W" : "L");
-const GRAD = {ROCK:"linear-gradient(170deg,#0f766e,#134e4a)",PAPER:"linear-gradient(170deg,#475569,#0f172a)",SCISSORS:"linear-gradient(170deg,#9f1d1d,#3f0d0d)"};
+const GRAD = {ROCK:"linear-gradient(170deg,#3b4fd8,#171e5a)",PAPER:"linear-gradient(170deg,#475569,#0f172a)",SCISSORS:"linear-gradient(170deg,#f43f5e,#601228)"};
 
 const A = (x,y,w,h,c,i="",s="") => `<div class="a ${c}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;${s}">${i}</div>`;
 const T = (x,y,txt,o={}) => {
@@ -212,7 +210,7 @@ function centerCol(o){
   h += mid;
   for(let i=0;i<15;i++){
     const row=i<8?0:1, idx=row?i-8:i, n=row?7:8, x0=640-(n*24+(n-1)*8)/2, x=x0+idx*32, y=484+row*32, r=pips[i];
-    h += A(x,y,24,24,"pip",r||"",r?`background:${CH[r]}`:`border:2px solid ${i===cur?K.p:"#c3cbd8"};${i===cur?"box-shadow:0 0 0 3px rgba(13,148,136,.2)":""};background:#f6f8fb`);
+    h += A(x,y,24,24,"pip",r||"",r?`background:${CH[r]}`:`border:2px solid ${i===cur?K.p:"#c3cbd8"};${i===cur?"box-shadow:0 0 0 3px rgba(59,79,216,.2)":""};background:#f6f8fb`);
   }
   h += T(640,560,streak?`<span style="color:${K.amberD}">STREAK ${streak}</span> <span style="color:${K.faint}">· best ${best}</span>`:`<span style="color:${K.faint}">No streak yet</span>`,{s:14,b:1,al:"c"});
   return h;
@@ -239,7 +237,7 @@ function arena(o){
 
 /* ---- middle-of-the-column states ---- */
 const midReady = () => T(640,254,"GET READY",{s:28,b:1,c:K.ink,al:"c"}) +
-  A(584,276,112,112,"","▶",`border-radius:50%;background:${K.p};color:#fff;display:grid;place-items:center;font-size:46px;padding-left:7px;box-shadow:0 12px 28px rgba(13,148,136,.4)`) +
+  A(584,276,112,112,"","▶",`border-radius:50%;background:${K.p};color:#fff;display:grid;place-items:center;font-size:46px;padding-left:7px;box-shadow:0 12px 28px rgba(59,79,216,.4)`) +
   T(640,420,`Press ${kc("SPACE")}`,{s:15,c:K.muted,al:"c"}) + T(640,446,"or hold your hand still for 2 s",{s:13,c:K.faint,al:"c"});
 const midCount = (n,pct) => A(560,238,160,160,"","",`border-radius:50%;background:conic-gradient(${K.p} ${pct}%,#d3d9e3 0)`) + A(569,247,142,142,"","",`border-radius:50%;background:#f6f8fb`) +
   T(640,318,n,{s:96,b:1,c:K.p,al:"c"}) +
@@ -279,7 +277,7 @@ function scrStart(){
   [["ROCK",215,-5,0],["PAPER",390,0,.5],["SCISSORS",565,5,1]].forEach(([m,cx,rot,d])=>{
     h += `<div class="a float" style="left:${cx-78}px;top:196px;width:156px;height:200px;animation-delay:${d}s"><div style="position:absolute;inset:0;border-radius:22px;overflow:hidden;background:${GRAD[m]};box-shadow:0 14px 30px rgba(30,20,70,.26);transform:rotate(${rot}deg)">${img(m,m==="ROCK"?164:184,"position:absolute;left:50%;bottom:-6px;transform:translateX(-50%)")}</div></div>`;
   });
-  h += T(390,462,`PRESS ${kc("SPACE")} TO PLAY`,{s:26,b:1,c:"#fff",al:"c",st:`background:${K.p};border-radius:40px;padding:14px 38px;box-shadow:0 10px 26px rgba(13,148,136,.38)`}).replace('class="a t"','class="a t pulse"');
+  h += T(390,462,`PRESS ${kc("SPACE")} TO PLAY`,{s:26,b:1,c:"#fff",al:"c",st:`background:${K.p};border-radius:40px;padding:14px 38px;box-shadow:0 10px 26px rgba(59,79,216,.38)`}).replace('class="a t"','class="a t pulse"');
   h += T(390,512,"Beat the AI to climb the leaderboard",{s:15,c:K.muted,al:"c"});
   h += T(390,664,"Your hand is tracked live on this computer. No video is saved.",{s:13,c:K.faint,al:"c"});
   h += leaderboard();
@@ -288,7 +286,7 @@ function scrStart(){
 function scrName(){
   let h = T(640,64,"STEP 1 OF 2",{s:13,b:1,c:K.faint,al:"c",st:"letter-spacing:3px"});
   h += T(640,128,"What's your name?",{s:46,b:1,c:K.ink,al:"c"}) + T(640,180,"It goes on the leaderboard if you beat the AI.",{s:19,c:K.muted,al:"c"});
-  h += A(290,236,700,112,"card","","border:3px solid "+K.p+";box-shadow:0 14px 40px rgba(13,148,136,.2)");
+  h += A(290,236,700,112,"card","","border:3px solid "+K.p+";box-shadow:0 14px 40px rgba(59,79,216,.2)");
   h += T(640,292,`Mano<span style="color:${K.p}">|</span>`,{s:56,b:1,c:K.ink,al:"c"});
   h += T(640,390,"Up to 12 letters. Leave it empty to play as Guest.",{s:15,c:K.faint,al:"c"});
   h += A(440,436,400,58,"btnx pri",`${kc("ENTER")} Continue`);
@@ -444,7 +442,7 @@ function scrStyle(){
   h += A(720,350,100,110,"tile p none",img("ROCK",100)) + A(836,350,100,110,"tile lit p",img("PAPER",100)) + A(952,350,100,110,"tile lit ai",img("SCISSORS",100));
   h += T(720,494,"Match track",{s:13,b:1,c:K.muted});
   ["W","L","D"].forEach((r,i)=>{ h += A(720+i*40,512,28,28,"pip",r,`background:${CH[r]}`); });
-  h += A(840,512,28,28,"pip","",`border:2px solid ${K.p};box-shadow:0 0 0 3px rgba(13,148,136,.2);background:#fff`) + A(880,512,28,28,"pip","","border:2px solid #cfd7e8;background:#fff");
+  h += A(840,512,28,28,"pip","",`border:2px solid ${K.p};box-shadow:0 0 0 3px rgba(59,79,216,.2);background:#fff`) + A(880,512,28,28,"pip","","border:2px solid #cfd7e8;background:#fff");
   h += T(940,526,"won · lost · draw · now · to come",{s:12,c:K.faint});
   h += T(720,578,"Key hints",{s:13,b:1,c:K.muted}) + `<div class="a hint" style="left:720px;top:590px;width:500px;height:34px;justify-content:flex-start;gap:20px"><span>${kc("SPACE")} Start</span><span>${kc("H")} Learn mode</span><span>${kc("Q")} Quit</span></div>`;
   h += T(60,650,"Corner radius 14–22 · soft shadows · one blue and one rose, used only for you and the AI.",{s:14,c:K.muted});

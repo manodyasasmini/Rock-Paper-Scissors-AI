@@ -19,32 +19,34 @@ MUTED = (91, 101, 117)
 FAINT = (138, 147, 163)
 WHITE = (255, 255, 255)
 
-PLAYER = (13, 148, 136)
-PLAYER_D = (15, 118, 110)
-PLAYER_T = (215, 240, 238)
-AI = (220, 38, 38)
-AI_D = (176, 25, 25)
-AI_T = (253, 234, 234)
-AI_L = (243, 166, 166)
+PLAYER = (59, 79, 216)
+PLAYER_D = (46, 62, 184)
+PLAYER_T = (226, 230, 252)
+AI = (244, 63, 94)
+AI_D = (190, 24, 60)
+AI_T = (254, 228, 233)
+AI_L = (251, 163, 176)
 
 GREEN = (22, 163, 74)
 GREEN_D = (15, 122, 55)
 GREEN_T = (227, 246, 233)
+RED = (220, 38, 38)
+RED_D = (176, 25, 25)
 AMBER = (245, 158, 11)
 AMBER_D = (154, 91, 0)
 AMBER_T = (255, 243, 214)
 
 TILE = (31, 41, 55)
 TILE_LINE = (55, 65, 81)
-TILE_PLAYER = (19, 78, 74)
-TILE_AI = (76, 29, 29)
+TILE_PLAYER = (30, 41, 110)
+TILE_AI = (96, 18, 40)
 CLOUD_TOP = (241, 245, 249)
 CLOUD_BOTTOM = (203, 213, 225)
 CHIP = (230, 234, 241)
 KEY_LINE = (205, 213, 230)
 
 MEDALS = [(245, 179, 1), (170, 180, 195), (205, 127, 50)]
-RESULT_COLORS = {"W": GREEN, "L": AI, "D": AMBER}
+RESULT_COLORS = {"W": GREEN, "L": RED, "D": AMBER}
 
 _FONT_FILES = {
     False: ["C:\\Windows\\Fonts\\segoeui.ttf", "C:\\Windows\\Fonts\\arial.ttf", "C:\\Windows\\Fonts\\trebuc.ttf"],
