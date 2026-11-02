@@ -347,15 +347,17 @@ This estimates about 20 FPS for the current game, below the 24 FPS target. UI re
 
 | Player | First version | New AI | New AI wins |
 |---|---|---|---|
-| Random | +0.002 | +0.003 | 33% |
-| Favours rock (60%) | +0.243 | +0.221 | 47% |
-| Cycles R-P-S | +0.866 | +0.839 | 88% |
-| Repeats R-R-P | +0.236 | **+0.761** | 81% |
-| Win-stay, lose-shift | +0.071 | **+0.814** | 87% |
-| Counters the AI's last move | -0.066 | **+0.835** | 89% |
-| Switches habit midway | +0.302 | +0.304 | 52% |
+| Random | +0.002 | +0.008 | 34% |
+| Favours rock (60%) | +0.243 | +0.229 | 47% |
+| Cycles R-P-S | +0.866 | +0.861 | 90% |
+| Repeats R-R-P | +0.236 | **+0.795** | 84% |
+| Win-stay, lose-shift | +0.071 | **+0.839** | 88% |
+| Counters the AI's last move | -0.066 | **+0.857** | 91% |
+| Switches habit midway | +0.302 | +0.306 | 53% |
 
 The new AI is fair against random play and about equal to the first version on simple habits, within noise (roughly 2 standard errors on the biased player). It is much stronger on patterns that depend on the last two moves or on the result of the last round. In longer games, forgetting old habits matters: with no decay the AI scores 0.40 against a player who changes habit twice, against 0.51 with the chosen decay.
+
+**How fast it learns a pattern.** A player throwing rock, rock, paper on repeat: the first version predicts the rocks but never the paper, so it never wins those rounds. The new AI predicts the third paper correctly (round 9) and every round after that. The first play-test matched this: with the original smoothing of 1.0 it only got the paper on the fourth try, so smoothing was lowered to 0.5, which improved every patterned player slightly and kept random play fair.
 
 **Limits to know about**
 - The tuning was done against my own scripted players, which are simpler than people. Real play-tests may change the best values.

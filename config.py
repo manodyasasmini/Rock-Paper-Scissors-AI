@@ -28,7 +28,7 @@ VIEW_NODE = (255, 255, 255)
 
 # AI engine. Tuned with `python -m ai.simulate` against scripted players; re-tune after real play-tests.
 AI_DECAY = 0.95            # each round, old observations count this much less (half-life about 13 rounds)
-AI_SMOOTHING = 1.0         # pseudo-count per move; keeps estimates near 1/3 until there is real evidence
+AI_SMOOTHING = 0.5         # pseudo-count per move; keeps estimates near 1/3 until there is real evidence
 AI_SCORE_FORGET = 0.9      # how fast an expert's track record fades
 AI_TRUST_SHARPNESS = 3.0   # how strongly the AI favours the better-performing expert
 AI_SOFTMAX_K = 8.0         # higher = the AI commits harder to its best move; lower = more random
