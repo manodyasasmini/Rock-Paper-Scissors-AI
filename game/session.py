@@ -2,9 +2,10 @@
 from collections import deque
 
 import config
-from ai.engine import CHOICES, MarkovEngine
+from ai.engine import CHOICES, AdaptiveEngine
 
 BEATS = {"ROCK": "SCISSORS", "PAPER": "ROCK", "SCISSORS": "PAPER"}
+GUEST_NAME = "Guest"  # never saved: each guest starts fresh and leaves nothing behind
 
 STATE_NAME_INPUT = "NAME_INPUT"          # Entering player name
 STATE_SESSION_CHOICE = "SESSION_CHOICE"  # Choose Start New vs Resume
@@ -34,7 +35,7 @@ def determine_winner(p_move, a_move):
 class GameSession:
     def __init__(self, store, engine=None):
         self.store = store
-        self.engine = engine or MarkovEngine()
+        self.engine = engine or AdaptiveEngine()
 
         self.state = STATE_NAME_INPUT
         self.state_start_time = 0.0
@@ -65,14 +66,16 @@ class GameSession:
         return self.state not in (STATE_NAME_INPUT, STATE_SESSION_CHOICE)
 
     def save(self):
-        if not self.player_name:
+        if not self.player_name or self.player_name == GUEST_NAME:
             return
         self.store.save_player(self.player_name, {
             "score_player": self.score_player,
             "score_ai": self.score_ai,
             "score_ties": self.score_ties,
             "best_streak": self.best_streak,
-            "transitions": self.engine.to_dict(),
+            "engine": self.engine.to_dict(),
+            # The first version's format, so rps_game.py can still read this profile
+            "transitions": self.engine.legacy_transitions(),
         })
 
     def switch_to_player(self, name, resume_scores=False):
@@ -82,8 +85,8 @@ class GameSession:
         self.score_player = self.score_ai = self.score_ties = 0
         self.best_streak = 0
 
-        saved = self.store.load_all().get(self.player_name)
-        self.engine.load(saved.get("transitions") if saved else None)
+        saved = None if self.player_name == GUEST_NAME else self.store.load_all().get(self.player_name)
+        self.engine.load_record(saved)
         if saved:
             self.best_streak = saved.get("best_streak", 0)
             if resume_scores:
@@ -120,7 +123,7 @@ class GameSession:
             self.score_ties += 1
             self.match_history.append("D")
 
-        self.engine.observe(self.player_move)
+        self.engine.observe(self.player_move, self.ai_move)
         self.save()
         self.state = STATE_SHOW_RESULT
         self.state_start_time = now
@@ -171,7 +174,7 @@ class GameSession:
                 self.switch_to_player(chosen_name)
                 self.state = STATE_IDLE
         elif key == KEY_ESC:
-            self.switch_to_player("Guest")
+            self.switch_to_player(GUEST_NAME)
             self.state = STATE_IDLE
         elif key == KEY_BACKSPACE:
             self.input_text = self.input_text[:-1]

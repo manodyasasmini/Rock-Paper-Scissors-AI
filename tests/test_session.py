@@ -123,10 +123,46 @@ def test_no_gesture_scores_nothing_and_teaches_nothing(session):
 
 
 def test_progress_is_saved_after_each_round(session, store):
-    session.handle_key(KEY_ESC, 0)
+    type_name(session, "Ana")
+    session.handle_key(KEY_ENTER, 0)
     session.engine.lock_move = lambda: type("P", (), {"ai_move": "SCISSORS"})()
     play_round(session, "ROCK")
-    assert store.load_all()["Guest"]["score_player"] == 1
+    saved = store.load_all()["Ana"]
+    assert saved["score_player"] == 1
+    assert saved["engine"]["version"] == 2
+    assert "transitions" in saved      # the first version's format stays readable by rps_game.py
+
+
+def test_guests_leave_nothing_behind(session, store):
+    session.handle_key(KEY_ESC, 0)
+    play_round(session, "ROCK")
+    play_round(session, "PAPER")
+    session.save()
+    assert store.load_all() == {}
+
+
+def test_the_next_guest_starts_with_a_blank_ai(session):
+    session.handle_key(KEY_ESC, 0)
+    play_round(session, "ROCK")
+    assert session.engine.rounds_seen == 1
+    session.handle_key(ord("p"), 0)
+    session.handle_key(KEY_ESC, 0)
+    assert session.engine.rounds_seen == 0
+
+
+def test_a_returning_player_keeps_what_the_ai_learned(store):
+    first = GameSession(store, MarkovEngine(rng=random.Random(3)))
+    type_name(first, "Ana")
+    first.handle_key(KEY_ENTER, 0)
+    for move in ["ROCK", "PAPER", "ROCK", "PAPER"]:
+        play_round(first, move)
+
+    second = GameSession(store, MarkovEngine(rng=random.Random(3)))
+    type_name(second, "Ana")
+    second.handle_key(KEY_ENTER, 0)
+    second.handle_key(ord("c"), 0)
+    assert second.engine.rounds_seen == 4
+    assert second.engine.last_move is None
 
 
 def test_reset_clears_scores_but_not_the_ais_memory(session):
@@ -135,7 +171,7 @@ def test_reset_clears_scores_but_not_the_ais_memory(session):
     play_round(session, "PAPER")
     session.handle_key(ord("r"), 0)
     assert (session.score_player, session.score_ai, session.score_ties) == (0, 0, 0)
-    assert session.engine.to_dict() != {}
+    assert session.engine.rounds_seen == 2
 
 
 def test_window_keys_are_returned_as_actions(session):
