@@ -21,7 +21,10 @@ from ui.gestures import gesture_icon
 CREDIT = "Created by SMS Abeyrathne · 235501H · BSc (Hons) Artificial Intelligence"
 
 # Where things sit in the design (1280 x 720)
-MATCH_CAM = (44, 86, 408, 382)
+CARD_TOP, CARD_H = 70, 520                 # the two player cards and the middle card share this top and height
+MATCH_CAM = (44, CARD_TOP + 62, 408, 430)   # your camera picture
+AI_PANEL = (828, CARD_TOP + 62, 408, 430)   # the AI's hand
+LEARN_BOX = (828, CARD_TOP + 62 + 430 - 146, 408, 146)
 CHECK_CAM = (60, 156, 640, 440)
 ROCK_SCALE = 0.84   # the rock artwork is bigger than the others, so it is drawn smaller to match
 
@@ -119,13 +122,6 @@ def _tile(c, x, y, w, h, move, side, lit, dim=False, hanging=False):
         c.paste_centered(icon, x + w / 2, y + 2 + (0 if hanging else 4 + (height - shown) / c.L.s))
     else:
         c.text(x + w / 2, y + h / 2, move[0], 28, theme.WHITE if lit else theme.FAINT, True, "mm")
-
-
-def _strip(c, x, y, w, h, lit, side):
-    gap = 14
-    tile_w = (w - 2 * gap) / 3
-    for i, move in enumerate(CHOICES):
-        _tile(c, x + i * (tile_w + gap), y, tile_w, h, move, side, move == lit, dim=lit is not None)
 
 
 def _trophy(c, cx, cy, size, colour):
@@ -323,27 +319,25 @@ def _check_screen(session, L, now, live_gesture, view):
 
 
 # ---------------------------------------------------------------- 4. the match
-def _build_match(win):
-    def build(c):
-        draw_card(c, 28, 24, 440, 616, accent=theme.PLAYER)
-        draw_card(c, 812, 24, 440, 616, accent=theme.AI)
-        draw_card(c, 500, 46, 280, 560)
-        x, y, w, h = 828, 86, 408, 382
-        panel = _gradient(c.L, c.L.d(w), c.L.d(h), theme.CLOUD_TOP, theme.CLOUD_BOTTOM)
-        c.paste_rounded(panel, x, y, w, h, 16)
-    return build
+def _build_match(c):
+    draw_card(c, 28, CARD_TOP, 440, CARD_H, accent=theme.PLAYER)
+    draw_card(c, 812, CARD_TOP, 440, CARD_H, accent=theme.AI)
+    draw_card(c, 500, CARD_TOP, 280, CARD_H)
+    x, y, w, h = AI_PANEL
+    panel = _gradient(c.L, c.L.d(w), c.L.d(h), theme.CLOUD_TOP, theme.CLOUD_BOTTOM)
+    c.paste_rounded(panel, x, y, w, h, 16)
 
 
 def _learn_panel(c, session):
-    """What the AI expected, in place of its move tiles. Only drawn after the reveal, in Learn mode."""
-    x, y, w, h = 828, 482, 408, 140
+    """What the AI expected, drawn over the bottom of its panel. Only after the reveal, and only in Learn mode."""
+    x, y, w, h = LEARN_BOX
     prediction = session.prediction
     c.rect(x, y, w, h, fill=theme.AI_L, radius=14)
     c.rect(x + 1, y + 1, w - 2, h - 2, fill=theme.AI_T, radius=13)
     evidence_colors = {"LOW": theme.AMBER_D, "MEDIUM": theme.PLAYER_D, "HIGH": theme.GREEN_D}
-    c.text(x + 206, y + 18, f"EVIDENCE: {prediction.evidence}", 12, evidence_colors[prediction.evidence], True)
-    c.wrapped(x + 206, y + 42, session.explanation, 13.5, theme.INK2, 194, 17, max_lines=6)
-    base, max_h = y + 106, 68
+    c.text(x + 206, y + 20, f"EVIDENCE: {prediction.evidence}", 12, evidence_colors[prediction.evidence], True)
+    c.wrapped(x + 206, y + 44, session.explanation, 13.5, theme.INK2, 194, 17, max_lines=5)
+    base, max_h = y + 110, 68
     chance_y = base - max_h / 3
     c.dashed_line(x + 8, chance_y, x + 166, chance_y, theme.FAINT, 1.5, 5, 4)
     c.text(x + 200, chance_y, "chance", 10, theme.FAINT, False, "rm")
@@ -370,7 +364,7 @@ def _pips(c, flags, total, current):
         x0 = 640 - (n * size + (n - 1) * gap) / 2
         for k in range(n):
             i = start + k
-            x, y = x0 + k * (size + gap), 484 + row * 32
+            x, y = x0 + k * (size + gap), CARD_TOP + 418 + row * 30
             if i < len(flags):
                 c.circle(x + size / 2, y + size / 2, size / 2, fill=theme.RESULT_COLORS[flags[i]])
                 c.text(x + size / 2, y + size / 2 - 1, flags[i], 11, theme.WHITE, True, "mm")
@@ -386,20 +380,23 @@ def _match(session, L, now, live_gesture, view):
     revealed = state == STATE_SHOW_RESULT
     valid = revealed and session.round_result != "INVALID"
     win = {"PLAYER": "p", "AI": "a"}.get(session.round_result) if revealed else None
-    c = _begin(L, f"match-{win}", _build_match(win))
+    c = _begin(L, "match", _build_match)
+    head = CARD_TOP + 32    # the line with the name and the status chip
 
     # ---- your card
-    c.text(52, 56, (session.player_name or "").upper(), 26, theme.PLAYER, True)
+    c.text(52, head, (session.player_name or "").upper(), 26, theme.PLAYER, True)
     hand = view is not None and view.hand_found
     if revealed:
         if valid:
-            _chip(c, 452, 56, f"Final: {session.player_move}", theme.GREEN_D, theme.GREEN_T)
+            _chip(c, 452, head, f"Final: {session.player_move}", theme.GREEN_D, theme.GREEN_T)
         else:
-            _chip(c, 452, 56, "No hand seen", theme.AMBER_D, theme.AMBER_T)
+            _chip(c, 452, head, "No hand seen", theme.AMBER_D, theme.AMBER_T)
+    elif live_gesture:
+        _chip(c, 452, head, f"{live_gesture.capitalize()} detected", theme.GREEN_D, theme.GREEN_T)
     elif hand:
-        _chip(c, 452, 56, "Hand detected", theme.GREEN_D, theme.GREEN_T)
+        _chip(c, 452, head, "Hand detected", theme.GREEN_D, theme.GREEN_T)
     else:
-        _chip(c, 452, 56, "Looking for your hand", theme.AMBER_D, theme.AMBER_T)
+        _chip(c, 452, head, "Looking for your hand", theme.AMBER_D, theme.AMBER_T)
 
     cx, cy, cw, ch = MATCH_CAM
     _camera(c, view, MATCH_CAM)
@@ -414,42 +411,41 @@ def _match(session, L, now, live_gesture, view):
         _pill(c, cx + cw / 2, cy + 32, "Hold your hand up before SHOOT", theme.AMBER_D, 14)
     elif not hand:
         _pill(c, cx + cw / 2, cy + 32, "Show your hand", theme.AMBER_D, 14)
-    lit = session.player_move if valid else (live_gesture if not revealed else None)
-    _strip(c, 44, 482, 408, 140, lit, "p")
 
     # ---- the AI's card
-    c.text(836, 56, "ADAPTIVE AI", 22, theme.AI, True)
+    c.text(836, head, "ADAPTIVE AI", 22, theme.AI, True)
     if session.learn_mode:
-        _chip(c, 1236, 56, "Learn mode", theme.PLAYER_D, theme.PLAYER_T, dot=True)
+        _chip(c, 1236, head, "Learn mode", theme.PLAYER_D, theme.PLAYER_T, dot=True)
     else:
-        _chip(c, 1236, 56, "Challenge", theme.MUTED, theme.CHIP, dot=True)
+        _chip(c, 1236, head, "Challenge", theme.MUTED, theme.CHIP, dot=True)
+    px, py, pw, ph = AI_PANEL
+    mid = py + ph / 2
     if valid:
-        icon = gesture_icon(session.ai_move, L.d(374 * (ROCK_SCALE if session.ai_move == "ROCK" else 1)), upside_down=True)
+        learn = session.learn_mode
+        room = (LEARN_BOX[1] - py - 8) if learn else ph - 8     # in Learn mode the hand sits above the learn box
+        scale = ROCK_SCALE if session.ai_move == "ROCK" else 1
+        icon = gesture_icon(session.ai_move, L.d(room * scale), upside_down=True)
         if icon is not None:
-            c.paste_centered(icon, 1032, 90)
+            c.paste_centered(icon, px + pw / 2, py + 4)
         else:
-            c.text(1032, 276, session.ai_move, 40, theme.AI, True, "mm")
+            c.text(px + pw / 2, mid, session.ai_move, 40, theme.AI, True, "mm")
+        if learn:
+            _learn_panel(c, session)
     elif state == STATE_COUNTDOWN:
         dots = "." * (int(now * 3) % 4)
-        c.text(1032 - c.tw("DECIDING...", 34, True) / 2, 246, "DECIDING" + dots, 34, theme.INK, True)
-        c.text(1032, 290, "Its move is locked in", 17, theme.MUTED, False, "mm")
+        c.text(px + pw / 2 - c.tw("DECIDING...", 34, True) / 2, mid - 30, "DECIDING" + dots, 34, theme.INK, True)
+        c.text(px + pw / 2, mid + 14, "Its move is locked in", 17, theme.MUTED, False, "mm")
     elif revealed:
-        c.text(1032, 246, "NO ROUND", 34, theme.INK, True, "mm")
-        c.text(1032, 290, "Nothing was counted", 17, theme.MUTED, False, "mm")
+        c.text(px + pw / 2, mid - 30, "NO ROUND", 34, theme.INK, True, "mm")
+        c.text(px + pw / 2, mid + 14, "Nothing was counted", 17, theme.MUTED, False, "mm")
     else:
-        c.text(1032, 246, "READY", 34, theme.INK, True, "mm")
-        c.text(1032, 290, "The AI is waiting", 17, theme.MUTED, False, "mm")
-    if valid and session.learn_mode:
-        _learn_panel(c, session)
-    else:
-        _strip(c, 828, 482, 408, 140, session.ai_move if valid else None, "ai")
+        c.text(px + pw / 2, mid - 30, "READY", 34, theme.INK, True, "mm")
+        c.text(px + pw / 2, mid + 14, "The AI is waiting", 17, theme.MUTED, False, "mm")
 
-    if win == "p":
-        c.rect(300, 10, 160, 28, fill=theme.GREEN, radius=14)
-        c.spaced(380, 24, "WINNER", 13, theme.WHITE, spacing=2)
-    if win == "a":
-        c.rect(1084, 10, 160, 28, fill=theme.GREEN, radius=14)
-        c.spaced(1164, 24, "WINNER", 13, theme.WHITE, spacing=2)
+    if win:
+        x0 = 300 if win == "p" else 1084
+        c.rect(x0, CARD_TOP - 14, 160, 28, fill=theme.GREEN, radius=14)
+        c.spaced(x0 + 80, CARD_TOP, "WINNER", 13, theme.WHITE, spacing=2)
 
     _middle(c, session, now, valid)
     return c
@@ -458,79 +454,81 @@ def _match(session, L, now, live_gesture, view):
 def _middle(c, session, now, valid):
     state = session.state
     total = session.match_rounds or 15
-    c.spaced(640, 76, "ROUND", 12, theme.FAINT, spacing=3)
+    t = CARD_TOP
+    c.spaced(640, t + 30, "ROUND", 12, theme.FAINT, spacing=3)
     number = str(session.round_number)
     parts = [(number, theme.INK, 44), (f" / {session.match_rounds}" if session.match_rounds else "", theme.FAINT, 22)]
-    width = sum(c.tw(t, s, True) for t, _, s in parts)
+    width = sum(c.tw(text, s, True) for text, _, s in parts)
     x = 640 - width / 2
     for text, colour, size in parts:
-        c.text(x, 112 if size == 44 else 114, text, size, colour, True)
+        c.text(x, t + (66 if size == 44 else 68), text, size, colour, True)
         x += c.tw(text, size, True)
     for x0, label, value, colour, tint in ((514, "YOU", session.score_player, theme.PLAYER, theme.PLAYER_T),
                                            (648, "AI", session.score_ai, theme.AI, theme.AI_T)):
-        c.rect(x0, 136, 118, 80, fill=colour, radius=16)
-        c.rect(x0 + 2, 138, 114, 76, fill=tint, radius=14)
-        c.text(x0 + 59, 154, label, 13, colour, True, "mm")
-        c.text(x0 + 59, 188, str(value), 40, theme.INK, True, "mm")
+        c.rect(x0, t + 90, 118, 76, fill=colour, radius=16)
+        c.rect(x0 + 2, t + 92, 114, 72, fill=tint, radius=14)
+        c.text(x0 + 59, t + 108, label, 13, colour, True, "mm")
+        c.text(x0 + 59, t + 141, str(value), 38, theme.INK, True, "mm")
 
     if state == STATE_COUNTDOWN:
         elapsed = now - session.state_start_time
         remaining = session.countdown_duration - elapsed
         progress = max(0.0, min(1.0, elapsed / session.countdown_duration))
-        c.circle(640, 318, 80, fill=theme.TRACK)
+        cy = t + 262
+        c.circle(640, cy, 76, fill=theme.TRACK)
         if progress > 0:
-            c.pie(640, 318, 80, -90, -90 + 360 * progress, theme.PLAYER)
-        c.circle(640, 318, 71, fill=theme.CARD)
+            c.pie(640, cy, 76, -90, -90 + 360 * progress, theme.PLAYER)
+        c.circle(640, cy, 67, fill=theme.CARD)
         number = "3" if remaining > 2 else "2" if remaining > 1 else "1" if remaining > 0 else "GO"
-        c.text(640, 322, number, 96 if number != "GO" else 64, theme.PLAYER, True, "mm")
+        c.text(640, cy + 4, number, 90 if number != "GO" else 60, theme.PLAYER, True, "mm")
         beat = 0 if remaining > 2 else 1 if remaining > 1 else 2 if remaining > 0 else 3
         words = ["ROCK", "PAPER", "SCISSORS", "SHOOT!"]
-        parts = []
+        chant = []
         for i, word in enumerate(words):
-            parts.append((word, theme.PLAYER if i == beat else theme.FAINT))
+            chant.append((word, theme.PLAYER if i == beat else theme.FAINT))
             if i < 3:
-                parts.append((" · ", theme.FAINT))
-        c.runs(640, 424, parts, 12.5)
+                chant.append((" · ", theme.FAINT))
+        c.runs(640, t + 372, chant, 12.5)
     elif state == STATE_SHOW_RESULT and valid:
         kind = session.round_result
         title, colour = {"PLAYER": ("YOU WIN!", theme.GREEN_D), "AI": ("AI WINS", theme.RED_D),
                          "TIE": ("DRAW", theme.AMBER_D)}[kind]
-        c.text(640, 250, title, 34, colour, True, "mm")
-        _tile(c, 522, 274, 104, 120, session.player_move, "p", True)
-        _tile(c, 654, 274, 104, 120, session.ai_move, "ai", True, hanging=True)
-        c.text(640, 334, "vs", 13, theme.FAINT, True, "mm")
+        c.text(640, t + 204, title, 34, colour, True, "mm")
+        _tile(c, 522, t + 228, 104, 120, session.player_move, "p", True)
+        _tile(c, 654, t + 228, 104, 120, session.ai_move, "ai", True, hanging=True)
+        c.text(640, t + 288, "vs", 13, theme.FAINT, True, "mm")
         if kind == "PLAYER":
             why, delta = f"{session.player_move} beats {session.ai_move}", "+1 point for you"
         elif kind == "AI":
             why, delta = f"{session.ai_move} beats {session.player_move}", "+1 point for the AI"
         else:
             why, delta = f"You both threw {session.player_move}", "No points this round"
-        c.text(640, 420, why, 15, theme.INK2, True, "mm")
-        c.text(640, 446, delta, 14, colour, True, "mm")
+        c.text(640, t + 372, why, 15, theme.INK2, True, "mm")
+        c.text(640, t + 396, delta, 14, colour, True, "mm")
     elif state == STATE_SHOW_RESULT:
-        c.text(640, 252, "MISSED IT", 30, theme.AMBER_D, True, "mm")
-        c.circle(640, 326, 52, fill=theme.AMBER_T)
+        c.text(640, t + 204, "MISSED IT", 30, theme.AMBER_D, True, "mm")
+        c.circle(640, t + 274, 50, fill=theme.AMBER_T)
         for k in range(18):
-            c.arc(640, 326, 51, k * 20, k * 20 + 11, theme.AMBER, 3)
-        c.text(640, 328, "?", 48, theme.AMBER_D, True, "mm")
-        c.wrapped(520, 404, "No gesture was seen, so this round doesn't count. Go again!", 14, theme.MUTED, 240, 19, align="c")
+            c.arc(640, t + 274, 49, k * 20, k * 20 + 11, theme.AMBER, 3)
+        c.text(640, t + 276, "?", 46, theme.AMBER_D, True, "mm")
+        c.wrapped(520, t + 346, "No gesture was seen, so this round doesn't count. Go again!", 14, theme.MUTED, 240, 19, align="c")
     else:
-        c.text(640, 254, "GET READY", 28, theme.INK, True, "mm")
-        c.circle(640, 332, 56, fill=theme.PLAYER)
-        c.polygon([(626, 308), (626, 356), (668, 332)], theme.WHITE)
+        c.text(640, t + 204, "GET READY", 28, theme.INK, True, "mm")
+        c.circle(640, t + 278, 52, fill=theme.PLAYER)
+        c.polygon([(627, t + 256), (627, t + 300), (666, t + 278)], theme.WHITE)
         group = c.tw("Press", 15) + 6 + max(26, c.tw("SPACE", 13, True) + 16)
-        c.text(640 - group / 2, 420, "Press", 15, theme.MUTED)
-        _keycap(c, 640 - group / 2 + c.tw("Press", 15) + 6, 420, "SPACE")
-        c.text(640, 446, f"or hold your hand still for {config.HOLD_TO_START_SECONDS:g} s", 13, theme.FAINT, False, "mm")
+        c.text(640 - group / 2, t + 360, "Press", 15, theme.MUTED)
+        _keycap(c, 640 - group / 2 + c.tw("Press", 15) + 6, t + 360, "SPACE")
+        c.text(640, t + 386, f"or hold your hand still for {config.HOLD_TO_START_SECONDS:g} s", 13, theme.FAINT, False, "mm")
 
     flags = [{"PLAYER": "W", "AI": "L", "TIE": "D"}[r.result] for r in session.match_log]
     if not session.match_rounds:
         flags = flags[-total:]
     _pips(c, flags, total, len(flags) if len(flags) < total else -1)
     if session.streak:
-        c.runs(640, 560, [(f"STREAK {session.streak}", theme.AMBER_D), (f" · best {session.best_streak}", theme.FAINT)], 14)
+        c.runs(640, t + 496, [(f"STREAK {session.streak}", theme.AMBER_D), (f" · best {session.best_streak}", theme.FAINT)], 14)
     else:
-        c.text(640, 560, "No streak yet", 14, theme.FAINT, True, "mm")
+        c.text(640, t + 496, "No streak yet", 14, theme.FAINT, True, "mm")
 
     if state == STATE_COUNTDOWN:
         hints = [("Q", "Quit")]

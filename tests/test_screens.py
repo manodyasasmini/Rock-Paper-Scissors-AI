@@ -129,8 +129,8 @@ def test_a_long_unlimited_or_twenty_round_match_renders(session):
 def test_the_check_screen_uses_a_bigger_camera_picture_than_the_match(session):
     check = camera_size(STATE_CAMERA_CHECK, 1280, 720)
     match = camera_size(STATE_IDLE, 1280, 720)
-    assert check == (640, 440) and match == (408, 382)
-    assert camera_size(STATE_IDLE, 1920, 1080) == (612, 573)
+    assert check == (640, 440) and match == (408, 430)
+    assert camera_size(STATE_IDLE, 1920, 1080) == (612, 645)
 
 
 def test_the_hold_ring_fills_while_a_hand_is_held(session):
@@ -151,7 +151,7 @@ def test_the_result_screen_shows_the_ais_hand(session):
     session.update(13.0, "ROCK")
     assert session.state == STATE_SHOW_RESULT
     after = render_ui(session, 1280, 720, 13.5, "ROCK", view)
-    ai_panel = (slice(86, 468), slice(828, 1236))
+    ai_panel = (slice(132, 562), slice(828, 1236))
     assert not np.array_equal(before[ai_panel], after[ai_panel])
 
 
@@ -170,7 +170,7 @@ def midway(session):
     for i in range(5):
         play(session, "ROCK", 10.0 * i)
     session.start_round(100.0)
-    return slice(482, 622), slice(828, 1236)   # where the AI's tiles, or its learn panel, are drawn
+    return slice(416, 562), slice(828, 1236)   # where the AI's learn panel is drawn
 
 
 def test_by_default_the_ais_expectation_is_never_drawn(session):
@@ -249,3 +249,13 @@ def test_the_name_screen_shows_what_is_typed(session):
     session.handle_key(ord("A"), 0)
     typed = render_ui(session, 1280, 720, 0.0, None, None)
     assert not np.array_equal(empty, typed)
+
+
+def test_the_chip_names_the_detected_move(session):
+    join(session)
+    session.start_round(0.0)
+    view = view_for(session.state, 1280, 720)
+    rock = render_ui(session, 1280, 720, 1.0, "ROCK", view)
+    paper = render_ui(session, 1280, 720, 1.0, "PAPER", view)
+    chip_area = (slice(95, 130), slice(300, 460))
+    assert not np.array_equal(rock[chip_area], paper[chip_area])
