@@ -3,9 +3,10 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw
 
+import config
 from ai.engine import CHOICES
 from game.session import (STATE_COUNTDOWN, STATE_IDLE, STATE_NAME_INPUT,
-                          STATE_SESSION_CHOICE, STATE_SHOW_RESULT)
+                          STATE_SESSION_CHOICE, STATE_SHOW_RESULT, STATE_SUMMARY)
 from ui.gestures import gesture_icon
 from ui.theme import (FONT_BANNER, FONT_CARD_MOVE, FONT_CARD_TITLE, FONT_HISTORY, FONT_INPUT,
                       FONT_LABEL, FONT_LABEL_BOLD, FONT_MODAL_TITLE, FONT_SCORE,
@@ -42,6 +43,102 @@ def camera_size(w, h):
     """Size the camera picture has to be for a canvas of this size."""
     layout = arena_layout(w, h)
     return layout["panel_w"], layout["panel_h"]
+
+
+EVIDENCE_COLORS = {"LOW": (255, 180, 50, 255), "MEDIUM": (0, 220, 255, 255), "HIGH": (0, 255, 150, 255)}
+
+
+def _wrap(draw, text, font, width):
+    lines, line = [], ""
+    for word in text.split():
+        trial = f"{line} {word}".strip()
+        if draw.textlength(trial, font=font) <= width or not line:
+            line = trial
+        else:
+            lines.append(line)
+            line = word
+    return lines + ([line] if line else [])
+
+
+def _draw_ai_read(draw, session, x, y, width):
+    """What the AI expected the player to throw, with chance marked, and why. Only shown after the reveal."""
+    prediction = session.prediction
+    draw.text((x, y + 26), "AI EXPECTED YOU TO THROW", font=FONT_LABEL_BOLD, fill=(255, 120, 170, 255), anchor="lm")
+    if prediction.expected is None:
+        draw.text((x, y + 70), "NO PATTERN YET", font=FONT_CARD_TITLE, fill=(180, 140, 170, 255), anchor="lm")
+        evidence_y = y + 112
+        text_y = y + 140
+    else:
+        bar_x = x + 92
+        bar_w = width - 92 - 50
+        for i, move in enumerate(CHOICES):
+            row_y = y + 62 + i * 38
+            probability = prediction.probs[move]
+            thrown = move == session.player_move
+            draw.text((x, row_y), move, font=FONT_LABEL_BOLD, fill=PLAYER_ACCENT if thrown else (225, 215, 235, 255), anchor="lm")
+            draw.rounded_rectangle([bar_x, row_y - 8, bar_x + bar_w, row_y + 8], radius=6, fill=(30, 18, 32, 255),
+                                   outline=PLAYER_ACCENT if thrown else None, width=2)
+            draw.rounded_rectangle([bar_x, row_y - 8, bar_x + max(12, int(bar_w * probability)), row_y + 8], radius=6,
+                                   fill=(255, 70, 140, 255) if move == prediction.expected else (150, 60, 100, 255))
+            chance_x = bar_x + bar_w // 3
+            draw.line([(chance_x, row_y - 12), (chance_x, row_y + 12)], fill=(255, 255, 255, 210), width=1)
+            draw.text((bar_x + bar_w + 10, row_y), f"{round(probability * 100)}%", font=FONT_LABEL, fill=(235, 225, 240, 255), anchor="lm")
+        evidence_y = y + 172
+        text_y = y + 198
+        draw.text((x + width, evidence_y), "white tick = chance", font=FONT_HISTORY, fill=(150, 140, 165, 255), anchor="rm")
+    draw.text((x, evidence_y), f"EVIDENCE: {prediction.evidence}", font=FONT_LABEL_BOLD,
+              fill=EVIDENCE_COLORS[prediction.evidence], anchor="lm")
+    for j, line in enumerate(_wrap(draw, session.explanation, FONT_LABEL, width)[:5]):
+        draw.text((x, text_y + j * 21), line, font=FONT_LABEL, fill=(235, 220, 235, 255))
+
+
+def _draw_summary(draw, session, w, h):
+    """The end-of-match screen: the score, how well the AI read the player, and the habit it found."""
+    summary = session.summary
+    draw.text((w // 2, 50), "ROCK PAPER SCISSORS AI", font=FONT_BANNER, fill=(35, 55, 90, 180), anchor="mm")
+    modal_w, modal_h = 780, 560
+    mx1, my1 = (w - modal_w) // 2, (h - modal_h) // 2 + 16
+    mx2, my2 = mx1 + modal_w, my1 + modal_h
+    draw.rounded_rectangle([mx1 - 4, my1 - 4, mx2 + 4, my2 + 4], radius=24, fill=(0, 240, 255, 60))
+    draw.rounded_rectangle([mx1, my1, mx2, my2], radius=20, fill=(15, 18, 28, 250), outline=PLAYER_ACCENT, width=2)
+    cx = w // 2
+
+    colors = {"YOU WIN": (0, 255, 160, 255), "AI WINS": (255, 75, 95, 255), "DRAW": (255, 215, 0, 255)}
+    draw.text((cx, my1 + 34), f"MATCH COMPLETE  -  {session.player_name.upper()}", font=FONT_CARD_TITLE, fill=(160, 180, 210, 255), anchor="mm")
+    draw.text((cx, my1 + 84), summary.headline, font=FONT_BANNER, fill=colors[summary.headline], anchor="mm")
+    draw.text((cx, my1 + 132), f"YOU {summary.wins}     AI {summary.losses}     DRAWS {summary.ties}", font=FONT_TITLE, fill=(255, 255, 255, 255), anchor="mm")
+    draw.line([(mx1 + 40, my1 + 160), (mx2 - 40, my1 + 160)], fill=(50, 60, 80, 255), width=1)
+
+    draw.text((cx, my1 + 188), "WHAT THE AI LEARNED ABOUT YOU", font=FONT_LABEL_BOLD, fill=(255, 120, 170, 255), anchor="mm")
+    if summary.predicted_rounds:
+        line = (f"It predicted {summary.hits} of {summary.predicted_rounds} of your throws "
+                f"({round(summary.accuracy * 100)}%). Guessing blindly gets about 33%.")
+    else:
+        line = "It never had enough to make a prediction."
+    draw.text((cx, my1 + 220), line, font=FONT_SUB_BANNER, fill=(235, 235, 245, 255), anchor="mm")
+
+    # Running accuracy as the match went on, with chance marked
+    gx1, gy1, gx2, gy2 = mx1 + 70, my1 + 252, mx2 - 70, my1 + 372
+    draw.rounded_rectangle([gx1 - 12, gy1 - 12, gx2 + 12, gy2 + 12], radius=10, fill=(20, 26, 40, 255))
+    chance_y = gy2 - int((gy2 - gy1) / 3)
+    for dash in range(gx1, gx2, 14):
+        draw.line([(dash, chance_y), (dash + 7, chance_y)], fill=(255, 255, 255, 140), width=1)
+    draw.text((gx2 - 2, chance_y - 10), "chance", font=FONT_HISTORY, fill=(170, 180, 200, 255), anchor="rm")
+    draw.text((gx1 - 18, gy1), "100%", font=FONT_HISTORY, fill=(130, 145, 170, 255), anchor="rm")
+    draw.text((gx1 - 18, gy2), "0%", font=FONT_HISTORY, fill=(130, 145, 170, 255), anchor="rm")
+    count = len(summary.running_accuracy)
+    points = [((gx1 + int(i * (gx2 - gx1) / (count - 1))) if count > 1 else (gx1 + gx2) // 2,
+               gy2 - int((gy2 - gy1) * acc)) for i, acc in enumerate(summary.running_accuracy)]
+    if len(points) > 1:
+        draw.line(points, fill=(255, 120, 170, 255), width=3)
+    for point, hit in zip(points, summary.hit_flags):
+        draw.ellipse([point[0] - 6, point[1] - 6, point[0] + 6, point[1] + 6],
+                     fill=(0, 255, 160, 255) if hit else (255, 75, 95, 255))
+    draw.text((cx, gy2 + 26), "green = the AI guessed that throw, red = it missed", font=FONT_HISTORY, fill=(150, 160, 180, 255), anchor="mm")
+
+    for j, habit_line in enumerate(_wrap(draw, summary.habit, FONT_SUB_BANNER, modal_w - 120)[:2]):
+        draw.text((cx, my1 + 424 + j * 26), habit_line, font=FONT_SUB_BANNER, fill=PLAYER_ACCENT, anchor="mm")
+    draw.text((cx, my1 + 520), "[SPACE] New match      [P] Switch player      [Q] Quit", font=FONT_LABEL_BOLD, fill=(255, 200, 0, 255), anchor="mm")
 
 
 _mask_cache = {}
@@ -180,6 +277,11 @@ def render_ui(session, w, h, current_time, live_gesture, view):
         final_img = Image.alpha_composite(pil_frame, overlay)
         return cv2.cvtColor(np.array(final_img.convert("RGB")), cv2.COLOR_RGB2BGR)
 
+    elif session.state == STATE_SUMMARY:
+        _draw_summary(draw, session, w, h)
+        final_img = Image.alpha_composite(pil_frame, overlay)
+        return cv2.cvtColor(np.array(final_img.convert("RGB")), cv2.COLOR_RGB2BGR)
+
     # -------------------------------------------------------------
     # A. TOP SCOREBOARD DOCK (Glassmorphic Dark Panel with Neon Border)
     # -------------------------------------------------------------
@@ -211,6 +313,11 @@ def render_ui(session, w, h, current_time, live_gesture, view):
     draw.text((center_x - 85, bar_y1 + 28), str(session.score_player), font=FONT_SCORE, fill=(255, 255, 255, 255))
 
     draw.text((center_x - 20, bar_y1 + 38), "VS", font=FONT_LABEL_BOLD, fill=(140, 150, 180, 255))
+    if config.MATCH_ROUNDS > 0:
+        played = len(session.match_log)
+        shown_round = played if session.state == STATE_SHOW_RESULT and played else min(played + 1, config.MATCH_ROUNDS)
+        draw.text((center_x, bar_y1 + 72), f"{shown_round}/{config.MATCH_ROUNDS}", font=FONT_HISTORY,
+                  fill=(140, 150, 180, 255), anchor="mm")
 
     draw.rounded_rectangle([center_x + 45, bar_y1 + 20, center_x + 170, bar_y1 + 86], radius=12, fill=(65, 15, 35, 230), outline=(255, 60, 110, 255), width=2)
     draw.text((center_x + 58, bar_y1 + 24), "AI", font=FONT_LABEL_BOLD, fill=(255, 80, 130, 255))
@@ -286,7 +393,7 @@ def render_ui(session, w, h, current_time, live_gesture, view):
 
     if session.state == STATE_COUNTDOWN:
         _pill(draw, cam_x + cam_w // 2, cam_y + 28, "SHOW GESTURE NOW!", FONT_LABEL_BOLD, (255, 255, 255, 255))
-    elif not view.hand_found:
+    elif not view.hand_found and session.state != STATE_SHOW_RESULT:
         _pill(draw, cam_x + cam_w // 2, cam_y + 28, "SHOW YOUR HAND", FONT_LABEL_BOLD, (255, 180, 50, 255))
     if session.state == STATE_IDLE:
         _pill(draw, cam_x + cam_w // 2, cam_y + cam_h - 34, "ARE YOU READY?   Press [SPACE] to Start",
@@ -307,12 +414,14 @@ def render_ui(session, w, h, current_time, live_gesture, view):
     ai_cy = cam_y + cam_h // 2
 
     if session.state == STATE_SHOW_RESULT and session.ai_move:
-        # The AI's hand hangs down from the top edge, facing the player
+        # The AI hand hangs down from the top edge on the left; what it expected is on the right
+        hand_cx = ai_panel_x + 112
         icon = gesture_icon(session.ai_move, cam_h - 8, upside_down=True)
         if icon is not None:
-            overlay.alpha_composite(icon, (ai_cx - icon.width // 2, cam_y + 4))
+            overlay.alpha_composite(icon, (hand_cx - icon.width // 2, cam_y + 4))
         else:
-            draw.text((ai_cx, ai_cy), session.ai_move, font=FONT_CARD_MOVE, fill=(255, 100, 160, 255), anchor="mm")
+            draw.text((hand_cx, ai_cy), session.ai_move, font=FONT_CARD_MOVE, fill=(255, 100, 160, 255), anchor="mm")
+        _draw_ai_read(draw, session, ai_panel_x + 236, cam_y, cam_w - 250)
     elif session.state == STATE_COUNTDOWN:
         # The dots are drawn after the word, with room kept for all three so the word never shifts
         dots = "." * (int(current_time * 3) % 4)
@@ -321,9 +430,14 @@ def render_ui(session, w, h, current_time, live_gesture, view):
         draw.text((start_x, ai_cy - 14), "DECIDING", font=FONT_CARD_MOVE, fill=(255, 180, 80, 255), anchor="lm")
         draw.text((start_x + word_w + 2, ai_cy - 14), dots, font=FONT_CARD_MOVE, fill=(255, 180, 80, 255), anchor="lm")
         draw.text((ai_cx, ai_cy + 28), "MOVE LOCKED", font=FONT_LABEL_BOLD, fill=(230, 180, 210, 255), anchor="mm")
+        evidence = session.prediction.evidence
+        draw.text((ai_cx, ai_cy + 58), f"EVIDENCE: {evidence}", font=FONT_LABEL, fill=EVIDENCE_COLORS[evidence], anchor="mm")
     else:
         draw.text((ai_cx, ai_cy - 14), "READY", font=FONT_CARD_MOVE, fill=(180, 140, 170, 255), anchor="mm")
         draw.text((ai_cx, ai_cy + 28), "AWAITING ROUND", font=FONT_LABEL_BOLD, fill=(230, 180, 210, 255), anchor="mm")
+        if session.engine.rounds_seen:
+            draw.text((ai_cx, ai_cy + 58), f"It has seen {session.engine.rounds_seen} of your throws", font=FONT_LABEL,
+                      fill=(190, 160, 180, 255), anchor="mm")
 
     _move_strip(overlay, draw, ai_panel_x, lay["strip_y1"], ai_panel_x + cam_w, lay["strip_y2"],
                 session.ai_move if session.state == STATE_SHOW_RESULT else None, AI_ACCENT, (65, 15, 35, 235))
@@ -365,9 +479,10 @@ def render_ui(session, w, h, current_time, live_gesture, view):
         draw.text((c_cx, c_cy), count_str, font=FONT_CARD_MOVE, fill=color, anchor="mm")
 
     elif session.state == STATE_SHOW_RESULT:
-        banner_w, banner_h = 340, 104
-        bx = (w - banner_w) // 2
-        by = cam_y + (cam_h - banner_h) // 2 - 10
+        # The banner sits at the bottom of the camera panel, so it never covers the AI's hand
+        banner_w, banner_h = 400, 84
+        bx = cam_x + (cam_w - banner_w) // 2
+        by = cam_y + cam_h - banner_h - 14
 
         if session.round_result == "PLAYER":
             res_title = "VICTORY!"
@@ -397,10 +512,11 @@ def render_ui(session, w, h, current_time, live_gesture, view):
         draw.rounded_rectangle([bx - 3, by - 3, bx + banner_w + 3, by + banner_h + 3], radius=20, fill=banner_border)
         draw.rounded_rectangle([bx, by, bx + banner_w, by + banner_h], radius=18, fill=banner_bg)
 
-        draw.text((bx + banner_w // 2, by + 36), res_title, font=FONT_BANNER, fill=text_color, anchor="mm")
-        draw.text((bx + banner_w // 2, by + 76), res_sub, font=FONT_SUB_BANNER, fill=(220, 230, 240, 255), anchor="mm")
+        draw.text((bx + banner_w // 2, by + 28), res_title, font=FONT_BANNER, fill=text_color, anchor="mm")
+        draw.text((bx + banner_w // 2, by + 64), res_sub, font=FONT_SUB_BANNER, fill=(220, 230, 240, 255), anchor="mm")
 
-        _pill(draw, w // 2, by + banner_h + 32, "Press [SPACE] for Next Round", FONT_LABEL_BOLD, (0, 255, 220, 255), pad=22, height=38)
+        prompt = "Press [SPACE] to see your match summary" if session.match_complete else "Press [SPACE] for Next Round"
+        _pill(draw, cam_x + cam_w // 2, cam_y + 28, prompt, FONT_LABEL_BOLD, (0, 255, 220, 255), pad=22, height=38)
 
     # -------------------------------------------------------------
     # D. BOTTOM CONTROLS DOCK (Sleek Glass Dock)

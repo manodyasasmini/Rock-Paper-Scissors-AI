@@ -82,3 +82,45 @@ def test_icons_exist_and_scale(move):
     assert np.array(dim)[:, :, 3].max() <= 0.31 * 255
     flipped = gesture_icon(move, 120, upside_down=True)
     assert flipped.size == icon.size
+
+
+@pytest.mark.parametrize("w,h", SIZES)
+def test_summary_and_ai_read_screens_render(session, monkeypatch, w, h):
+    monkeypatch.setattr("config.MATCH_ROUNDS", 6)
+    view = view_for(w, h)
+    session.handle_key(KEY_ESC, 0)
+    pattern = ["ROCK", "ROCK", "PAPER"]
+    for i in range(6):
+        session.start_round(10.0 * i)
+        session.update(10.0 * i + 3, pattern[i % 3])
+        image = render_ui(session, w, h, 10.0 * i + 4, pattern[i % 3], view)
+        assert image.shape == (h, w, 3)
+    session.handle_key(KEY_SPACE, 100.0)
+    assert session.state == "SUMMARY"
+    assert render_ui(session, w, h, 101.0, None, None).shape == (h, w, 3)
+
+
+def test_the_bars_stay_hidden_until_the_reveal(session):
+    """Showing the AI's expectation during play would tell the player how to beat it."""
+    w, h = 1280, 720
+    view = view_for(w, h)
+    session.handle_key(KEY_ESC, 0)
+    for i in range(5):
+        session.start_round(10.0 * i)
+        session.update(10.0 * i + 3, "ROCK")
+    session.start_round(100.0)
+    lay = arena_layout(w, h)
+    ai_panel = (slice(lay["panel_y1"], lay["panel_y1"] + lay["panel_h"]),
+                slice(lay["ai_x1"] + 20 + 220, lay["ai_x1"] + 20 + lay["panel_w"]))
+
+    during = render_ui(session, w, h, 101.0, "ROCK", view)[ai_panel]
+    session.prediction.probs = {"ROCK": 0.9, "PAPER": 0.05, "SCISSORS": 0.05}   # a very different expectation
+    session.prediction.expected = "ROCK"
+    assert np.array_equal(during, render_ui(session, w, h, 101.0, "ROCK", view)[ai_panel])
+
+    session.update(103.2, "ROCK")
+    revealed = render_ui(session, w, h, 104.0, "ROCK", view)[ai_panel]
+    assert not np.array_equal(during, revealed)
+    session.prediction.probs = {"ROCK": 0.1, "PAPER": 0.8, "SCISSORS": 0.1}     # after the reveal the bars do follow it
+    session.prediction.expected = "PAPER"
+    assert not np.array_equal(revealed, render_ui(session, w, h, 104.0, "ROCK", view)[ai_panel])

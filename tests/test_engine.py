@@ -4,7 +4,7 @@ import random
 import pytest
 
 from ai.engine import (CHOICES, COUNTERS, EXPERT_FREQUENCY, EXPERT_LAST_TWO, MODE_RANDOM, AdaptiveEngine,
-                       outcome_for_player)
+                       explain, outcome_for_player)
 
 
 def make_engine(seed=1):
@@ -159,3 +159,52 @@ def test_reset_forgets_everything():
     engine.reset()
     assert engine.rounds_seen == 0
     assert engine.lock_move().top_expert == "No history yet"
+
+
+def pattern_engine():
+    engine = make_engine()
+    feed(engine, ["ROCK", "ROCK", "PAPER"] * 12 + ["ROCK", "ROCK"])
+    return engine
+
+
+def test_prediction_says_what_it_expects_and_why():
+    prediction = pattern_engine().lock_move()
+    assert prediction.expected == "PAPER"
+    assert prediction.reason == "you often throw paper after rock then rock"
+
+
+def test_explanation_when_the_ai_was_right():
+    prediction = pattern_engine().lock_move()
+    sentence = explain(prediction, "PAPER")
+    assert sentence.startswith("The AI expected PAPER (")
+    assert "because you often throw paper after rock then rock" in sentence
+    assert sentence.endswith("You threw it.")
+
+
+def test_explanation_when_the_player_broke_the_pattern():
+    sentence = explain(pattern_engine().lock_move(), "SCISSORS")
+    assert "But you threw SCISSORS." in sentence
+    assert "You broke your pattern!" in sentence
+
+
+def test_a_missed_guess_with_little_evidence_is_not_called_a_broken_pattern():
+    engine = make_engine()
+    feed(engine, ["ROCK", "PAPER"])
+    prediction = engine.lock_move()
+    assert prediction.evidence == "LOW"
+    sentence = explain(prediction, "SCISSORS" if prediction.expected != "SCISSORS" else "ROCK")
+    assert "broke your pattern" not in sentence
+    assert "an early guess" in sentence
+
+
+def test_explanations_for_special_cases():
+    assert "No hand" in explain(pattern_engine().lock_move(), None)
+    assert "First throw" in explain(make_engine().lock_move(), "ROCK")
+    random_engine = make_engine()
+    random_engine.toggle_mode()
+    assert explain(random_engine.lock_move(), "ROCK") == "Random mode: the AI just guessed."
+
+
+def test_a_guess_has_no_expected_move():
+    prediction = make_engine().lock_move()
+    assert prediction.expected is None and prediction.reason == ""

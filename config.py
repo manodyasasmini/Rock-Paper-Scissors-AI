@@ -36,3 +36,6 @@ AI_SOFTMAX_K = 8.0         # higher = the AI commits harder to its best move; lo
 # from about 53% to 78% at 2 observations and levels off near 80% from about 5.
 EVIDENCE_MEDIUM = 2
 EVIDENCE_HIGH = 5
+
+# Matches: a visitor plays this many rounds, then sees what the AI learned. 0 = play on without end.
+MATCH_ROUNDS = 15

@@ -3,10 +3,10 @@ import random
 
 import pytest
 
-from ai.engine import MarkovEngine
+from ai.engine import MarkovEngine, Prediction
 from game.session import (ACTION_QUIT, ACTION_TOGGLE_FULLSCREEN, KEY_BACKSPACE, KEY_ENTER, KEY_ESC,
                           KEY_SPACE, STATE_COUNTDOWN, STATE_IDLE, STATE_NAME_INPUT, STATE_SESSION_CHOICE,
-                          STATE_SHOW_RESULT, GameSession, determine_winner)
+                          STATE_SHOW_RESULT, STATE_SUMMARY, GameSession, determine_winner)
 from game.store import PlayerStore
 
 
@@ -23,6 +23,12 @@ def session(store):
 def type_name(session, text):
     for ch in text:
         session.handle_key(ord(ch), 0)
+
+
+def fix_ai_move(session, move):
+    """Make the AI always throw `move`, so results are predictable."""
+    uniform = {m: 1 / 3 for m in ("ROCK", "PAPER", "SCISSORS")}
+    session.engine.lock_move = lambda: Prediction(uniform, "LOW", "Random", move)
 
 
 def play_round(session, move, now=0.0):
@@ -103,7 +109,7 @@ def test_ai_move_is_locked_before_the_player_throws(session):
 
 def test_scores_and_streaks(session):
     session.handle_key(KEY_ESC, 0)
-    session.engine.lock_move = lambda: type("P", (), {"ai_move": "SCISSORS"})()
+    fix_ai_move(session, "SCISSORS")
     play_round(session, "ROCK")
     play_round(session, "ROCK")
     assert (session.score_player, session.streak, session.best_streak) == (2, 2, 2)
@@ -125,7 +131,7 @@ def test_no_gesture_scores_nothing_and_teaches_nothing(session):
 def test_progress_is_saved_after_each_round(session, store):
     type_name(session, "Ana")
     session.handle_key(KEY_ENTER, 0)
-    session.engine.lock_move = lambda: type("P", (), {"ai_move": "SCISSORS"})()
+    fix_ai_move(session, "SCISSORS")
     play_round(session, "ROCK")
     saved = store.load_all()["Ana"]
     assert saved["score_player"] == 1
@@ -188,3 +194,72 @@ def test_corrupt_save_is_kept_not_destroyed(tmp_path):
     assert any(p.name.startswith("players.json.corrupt-") for p in tmp_path.iterdir())
     store.save_player("Ana", {"score_player": 1})
     assert json.loads(path.read_text())["Ana"]["score_player"] == 1
+
+
+def short_match(monkeypatch, rounds=3):
+    monkeypatch.setattr("config.MATCH_ROUNDS", rounds)
+
+
+def test_a_match_ends_after_the_set_number_of_rounds(session, monkeypatch):
+    short_match(monkeypatch)
+    session.handle_key(KEY_ESC, 0)
+    play_round(session, "ROCK")
+    play_round(session, "PAPER")
+    assert not session.match_complete
+    play_round(session, "ROCK")
+    assert session.match_complete and session.state == STATE_SHOW_RESULT
+
+
+def test_space_after_the_last_round_shows_the_summary_then_starts_a_new_match(session, monkeypatch):
+    short_match(monkeypatch)
+    session.handle_key(KEY_ESC, 0)
+    for move in ("ROCK", "PAPER", "ROCK"):
+        play_round(session, move)
+    scores = (session.score_player, session.score_ai, session.score_ties)
+
+    session.handle_key(KEY_SPACE, 0)
+    assert session.state == STATE_SUMMARY
+    assert session.summary.rounds == 3
+    assert not session.tracking_active            # the camera is not needed on this screen
+
+    session.handle_key(KEY_SPACE, 0)
+    assert session.state == STATE_IDLE
+    assert session.match_log == [] and session.summary is None
+    assert (session.score_player, session.score_ai, session.score_ties) == scores  # running totals carry on
+
+
+def test_rounds_without_a_detected_hand_do_not_count_toward_the_match(session, monkeypatch):
+    short_match(monkeypatch)
+    session.handle_key(KEY_ESC, 0)
+    play_round(session, None)
+    play_round(session, "ROCK")
+    assert len(session.match_log) == 1
+
+
+def test_a_match_length_of_zero_never_ends(session, monkeypatch):
+    short_match(monkeypatch, rounds=0)
+    session.handle_key(KEY_ESC, 0)
+    for _ in range(20):
+        play_round(session, "ROCK")
+    assert not session.match_complete
+    session.handle_key(KEY_SPACE, 0)
+    assert session.state == STATE_COUNTDOWN
+
+
+def test_each_round_gets_an_explanation(session):
+    session.handle_key(KEY_ESC, 0)
+    play_round(session, "ROCK")
+    assert "First throw" in session.explanation
+    play_round(session, "ROCK")
+    assert session.explanation.startswith("The AI expected")
+    play_round(session, None)
+    assert "No hand" in session.explanation
+
+
+def test_switching_player_starts_a_clean_match(session, monkeypatch):
+    short_match(monkeypatch)
+    session.handle_key(KEY_ESC, 0)
+    play_round(session, "ROCK")
+    session.handle_key(ord("p"), 0)
+    session.handle_key(KEY_ESC, 0)
+    assert session.match_log == []

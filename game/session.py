@@ -2,7 +2,8 @@
 from collections import deque
 
 import config
-from ai.engine import CHOICES, AdaptiveEngine
+from ai.engine import CHOICES, AdaptiveEngine, explain
+from game.summary import RoundRecord, summarize
 
 BEATS = {"ROCK": "SCISSORS", "PAPER": "ROCK", "SCISSORS": "PAPER"}
 GUEST_NAME = "Guest"  # never saved: each guest starts fresh and leaves nothing behind
@@ -12,6 +13,7 @@ STATE_SESSION_CHOICE = "SESSION_CHOICE"  # Choose Start New vs Resume
 STATE_IDLE = "IDLE"                      # Waiting for player to press SPACE
 STATE_COUNTDOWN = "COUNTDOWN"            # 3, 2, 1 countdown
 STATE_SHOW_RESULT = "RESULT"             # Showing winner of current round
+STATE_SUMMARY = "SUMMARY"                # End of a match: what the AI learned
 
 ACTION_QUIT = "quit"
 ACTION_TOGGLE_FULLSCREEN = "fullscreen"
@@ -60,10 +62,24 @@ class GameSession:
         self.ai_move = None
         self.round_result = None
         self.prediction = None
+        self.explanation = ""
+        self.match_log = []      # one RoundRecord per round with a detected move
+        self.summary = None
 
     @property
     def tracking_active(self):
-        return self.state not in (STATE_NAME_INPUT, STATE_SESSION_CHOICE)
+        return self.state not in (STATE_NAME_INPUT, STATE_SESSION_CHOICE, STATE_SUMMARY)
+
+    @property
+    def match_complete(self):
+        return config.MATCH_ROUNDS > 0 and len(self.match_log) >= config.MATCH_ROUNDS
+
+    def start_new_match(self):
+        self.match_log = []
+        self.summary = None
+        self.explanation = ""
+        self.player_move = self.ai_move = self.round_result = None
+        self.state = STATE_IDLE
 
     def save(self):
         if not self.player_name or self.player_name == GUEST_NAME:
@@ -81,6 +97,8 @@ class GameSession:
     def switch_to_player(self, name, resume_scores=False):
         self.player_name = name.strip() or "Player 1"
         self.match_history.clear()
+        self.match_log = []
+        self.summary = None
         self.streak = 0
         self.score_player = self.score_ai = self.score_ties = 0
         self.best_streak = 0
@@ -123,6 +141,12 @@ class GameSession:
             self.score_ties += 1
             self.match_history.append("D")
 
+        self.explanation = explain(self.prediction, self.player_move)
+        if self.round_result != "INVALID":
+            expected = self.prediction.expected
+            self.match_log.append(RoundRecord(
+                self.player_move, self.ai_move, self.round_result, expected,
+                self.prediction.probs[expected] if expected else 0.0))
         self.engine.observe(self.player_move, self.ai_move)
         self.save()
         self.state = STATE_SHOW_RESULT
@@ -147,7 +171,12 @@ class GameSession:
             self.input_text = self.player_name
             self.state = STATE_NAME_INPUT
         elif key == KEY_SPACE:
-            if self.state in (STATE_IDLE, STATE_SHOW_RESULT):
+            if self.state == STATE_SHOW_RESULT and self.match_complete:
+                self.summary = summarize(self.match_log)
+                self.state = STATE_SUMMARY
+            elif self.state == STATE_SUMMARY:
+                self.start_new_match()
+            elif self.state in (STATE_IDLE, STATE_SHOW_RESULT):
                 self.start_round(now)
         elif key in (ord("d"), ord("D")):
             self.engine.toggle_mode()
@@ -156,7 +185,7 @@ class GameSession:
             self.streak = 0
             self.match_history.clear()
             self.save()
-            self.state = STATE_IDLE
+            self.start_new_match()
         return None
 
     def _handle_name_key(self, key):

@@ -52,6 +52,27 @@ class Prediction:
     ai_move: str
     weights: dict = field(default_factory=dict)  # how much each expert counted
     samples: float = 0.0                         # observations behind the lead expert's guess
+    expected: str = None                         # the move the AI thinks you will throw (None if it is guessing)
+    reason: str = ""                             # why, in plain words ("" if no single habit explains it)
+
+
+def explain(prediction, player_move):
+    """One sentence on what the AI expected this round and what happened."""
+    if player_move not in CHOICES:
+        return "No hand was detected, so the AI learned nothing this round."
+    if prediction.top_expert == "Random":
+        return "Random mode: the AI just guessed."
+    if prediction.expected is None:
+        return "First throw of this session: the AI had nothing to go on, so it guessed."
+
+    percent = round(prediction.probs[prediction.expected] * 100)
+    early = ", an early guess" if prediction.evidence == "LOW" else ""
+    why = f" because {prediction.reason}" if prediction.reason else " from a mix of your habits"
+    sentence = f"The AI expected {prediction.expected} ({percent}%{early}){why}."
+    if player_move == prediction.expected:
+        return sentence + " You threw it."
+    sentence += f" But you threw {player_move}."
+    return sentence + (" You broke your pattern!" if percent >= 60 and prediction.evidence != "LOW" else "")
 
 
 def _smooth(row):
@@ -129,7 +150,21 @@ class AdaptiveEngine:
         evidence = ("HIGH" if samples >= config.EVIDENCE_HIGH
                     else "MEDIUM" if samples >= config.EVIDENCE_MEDIUM else "LOW")
         probs = {move: float(blended[i]) for i, move in enumerate(CHOICES)}
-        return Prediction(probs, evidence, top, self._choose(blended), weights, samples)
+        expected = max(CHOICES, key=lambda move: probs[move])
+        own_pick = CHOICES[int(np.argmax(found[top][0]))]
+        reason = self._reason(top, found[top][0]) if own_pick == expected else ""
+        return Prediction(probs, evidence, top, self._choose(blended), weights, samples, expected, reason)
+
+    def _reason(self, expert, probs):
+        """The habit behind the lead expert's guess, in a few words."""
+        move = CHOICES[int(np.argmax(probs))].lower()
+        if expert == EXPERT_FREQUENCY:
+            return f"you throw {move} most often"
+        if expert == EXPERT_LAST_MOVE:
+            return f"you often throw {move} after {self.last_move.lower()}"
+        if expert == EXPERT_LAST_TWO:
+            return f"you often throw {move} after {CHOICES[self.last2].lower()} then {self.last_move.lower()}"
+        return f"after a {('win', 'loss', 'draw')[self.last_outcome]} you tend to throw {move}"
 
     def _choose(self, blended):
         """Pick by expected score. Close calls stay close to random, strong patterns get exploited."""
