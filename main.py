@@ -12,7 +12,7 @@ from game.store import PlayerStore
 from ui.camera import render_camera
 from ui.screens import camera_size, clear_caches, render_camera_problem, render_ui
 from vision.gesture import GestureSmoother, detect_gesture
-from vision.tracker import HandTracker
+from vision.tracker import BlockDetector, HandTracker
 
 NO_KEY = 255
 CAMERA_RETRY_SECONDS = 3.0
@@ -37,6 +37,7 @@ def main():
     session = GameSession(PlayerStore(config.DATA_FILE), settings=settings)
     smoother = GestureSmoother()
     sounds = Sounds(settings.sound)
+    block_detector = BlockDetector()
     admin_armed = False
 
     cv2.namedWindow(config.WINDOW_NAME, cv2.WINDOW_NORMAL)
@@ -73,6 +74,7 @@ def main():
             admin_armed = False
             next_retry = 0.0
             frames += 1
+            session.camera_blocked = block_detector.update(frame)
             if frames % 15 == 1:
                 new_size = canvas_size((frame.shape[1], frame.shape[0]))
                 if new_size != size:

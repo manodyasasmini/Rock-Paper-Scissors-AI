@@ -18,12 +18,21 @@ SOUNDS = {
     "tick0": [(660, 70)],
     "tick1": [(784, 70)],
     "tick2": [(988, 70)],
-    "win": [(659, 90), (784, 90), (1047, 220)],
+    "win": [(523, 70), (659, 70), (784, 70), (1047, 70), (784, 60), (1047, 320)],
     "lose": [(392, 150), (311, 280)],
     "draw": [(523, 110), (523, 170)],
     "missed": [(220, 280)],
     "passed": [(784, 80), (1047, 180)],
     "report": [(523, 100), (659, 100), (784, 100), (1047, 320)],
+}
+
+
+# Other win sounds to choose from (see tools/preview_win_sounds.py). Copy one into SOUNDS["win"] to use it.
+WIN_OPTIONS = {
+    "A: quick rising run": [(523, 70), (659, 70), (784, 70), (1047, 70), (784, 60), (1047, 320)],
+    "B: two bright notes": [(784, 110), (1175, 380)],
+    "C: gentle chime": [(1319, 120), (1568, 120), (2093, 420)],
+    "D: low and warm": [(392, 130), (523, 130), (659, 330)],
 }
 
 
@@ -35,7 +44,8 @@ def make_wav(notes, volume=0.45):
         fade = max(1, int(RATE * 0.008))   # a short fade in and out avoids clicks
         for i in range(count):
             envelope = min(1.0, i / fade, (count - 1 - i) / fade)
-            samples.append(int(32767 * volume * envelope * math.sin(2 * math.pi * frequency * i / RATE)))
+            tone = math.sin(2 * math.pi * frequency * i / RATE) + 0.25 * math.sin(4 * math.pi * frequency * i / RATE)   # a little overtone, so it is not a bare beep
+            samples.append(int(32767 * volume * envelope * tone / 1.25))
     buffer = io.BytesIO()
     with wave.open(buffer, "wb") as out:
         out.setnchannels(1)

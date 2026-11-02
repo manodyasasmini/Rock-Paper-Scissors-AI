@@ -65,6 +65,7 @@ class GameSession:
         self._beat = -1
         self.last_activity = 0.0
         self.hold_since = None
+        self.camera_blocked = False   # set by the game loop when the picture is a closed shutter or a covered lens
         self.check_passed = False   # the camera check is done; the player starts the match with SPACE
         self.admin_open = False
         self.admin_clear_armed = False

@@ -327,17 +327,25 @@ def _check_screen(session, L, now, live_gesture, view):
     progress = session.hold_progress(now)
     _hold_ring(c, x, y, w, h, progress)
     hand = view is not None and view.hand_found
-    if session.check_passed:
+    if session.camera_blocked:
+        _pill(c, x + w / 2, y + h - 38, "The camera is blocked", theme.AMBER_D)
+    elif session.check_passed:
         _pill(c, x + w / 2, y + h - 38, "All set!", theme.GREEN_D)
     elif progress > 0:
         left = max(0.0, config.HOLD_TO_START_SECONDS * (1 - progress))
         _pill(c, x + w / 2, y + h - 38, f"Hold still… {left:.1f} s", theme.PLAYER)
     else:
         _pill(c, x + w / 2, y + h - 38, "Hold your hand up" if not hand else "Hold your hand still", theme.AMBER_D)
-    steps = [("Camera connected", True), ("Hand detected", hand or progress > 0), ("Hold still for 2 seconds", session.check_passed)]
+    if session.camera_blocked:
+        steps = [("Camera blocked: open the shutter", False), ("Hand detected", False), ("Hold still for 2 seconds", False)]
+    else:
+        steps = [("Camera connected", True), ("Hand detected", hand or progress > 0), ("Hold still for 2 seconds", session.check_passed)]
     for i, (label, ok) in enumerate(steps):
         cy = 206 + i * 56
-        if ok:
+        if i == 0 and session.camera_blocked:
+            c.circle(778, cy, 18, fill=theme.AMBER)
+            c.glyph_text(778, cy, "!", 24, theme.WHITE, True)
+        elif ok:
             _check(c, 778, cy)
         else:
             _spinner(c, 778, cy, now)
@@ -448,6 +456,8 @@ def _match(session, L, now, live_gesture, view):
         _pill(c, cx + cw / 2, cy + 32, "Show your gesture on SHOOT!", theme.INK, 14)
     elif revealed and not valid:
         _pill(c, cx + cw / 2, cy + 32, "Hold your hand up before SHOOT", theme.AMBER_D, 14)
+    elif session.camera_blocked:
+        _pill(c, cx + cw / 2, cy + 32, "The camera is blocked", theme.AMBER_D, 14)
     elif not hand:
         _pill(c, cx + cw / 2, cy + 32, "Show your hand", theme.AMBER_D, 14)
 
