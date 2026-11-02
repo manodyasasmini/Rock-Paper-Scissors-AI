@@ -32,3 +32,4 @@ settings.json.tmp
 poster/
 design/screenshots/
 *.whl
+design/generated-screenshots/

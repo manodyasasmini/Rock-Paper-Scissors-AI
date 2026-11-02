@@ -42,7 +42,7 @@ def make_hand(gesture, cx=0.5, cy=0.5, palm=0.2):
 
 
 def main():
-    out_demo = os.path.join(ROOT, "demo")
+    out_demo = os.path.join(ROOT, "design", "generated-screenshots")
     out_poster = os.path.join(ROOT, "design", "poster-assets")
     os.makedirs(out_demo, exist_ok=True)
     os.makedirs(out_poster, exist_ok=True)
@@ -123,7 +123,7 @@ def main():
 
     for name, image in saved.items():
         cv2.imwrite(os.path.join(out_demo, name + ".png"), image)
-    print(f"wrote {len(saved)} pictures to demo/ and 4 to design/poster-assets/")
+    print(f"wrote {len(saved)} pictures to design/generated-screenshots/ and 4 to design/poster-assets/")
 
 
 if __name__ == "__main__":

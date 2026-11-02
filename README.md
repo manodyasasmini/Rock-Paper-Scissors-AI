@@ -7,7 +7,7 @@
 
 Play **Rock Paper Scissors** against an AI with your bare hand and a webcam. The AI learns your habits as the match goes on, and at the end the game shows you what it found out about you.
 
-![The report card at the end of a match](demo/12-report.png)
+![The report card at the end of a match](demo/report.png)
 
 ## Why this project
 
@@ -23,19 +23,21 @@ Simple Rock Paper Scissors bots either play at random or follow one fixed rule, 
 
 ## Screens
 
-| Start screen | Name | Is this you? |
-| :---: | :---: | :---: |
-| ![Start screen](demo/01-start.png) | ![Name](demo/02-name.png) | ![Is this you](demo/03-is-this-you.png) |
+Screenshots from the running game, played by test players.
 
-| Camera check | Countdown | You win |
+| Start screen | Is this you? | Camera check |
 | :---: | :---: | :---: |
-| ![Camera check](demo/04-camera-check.png) | ![Countdown](demo/06-countdown.png) | ![You win](demo/07-you-win.png) |
+| ![Start screen](demo/start-screen-2.png) | ![Is this you](demo/is-this-you.png) | ![Camera check](demo/camera-check.png) |
+| *Who beat the AI most, then press SPACE* | *Asked when a name is already taken* | *Hold a hand up until everything is ticked* |
 
-| Learn mode | Missed round | Every round |
+| You win | Draw | AI wins |
 | :---: | :---: | :---: |
-| ![Learn mode](demo/10-learn-mode.png) | ![Missed round](demo/11-missed.png) | ![Every round](demo/13-every-round.png) |
+| ![You win](demo/you-win.png) | ![Draw](demo/draw.png) | ![AI wins](demo/ai-wins.png) |
 
-The pictures use the plain "skeleton only" camera view and made-up leaderboard names. Run `python tools/make_screenshots.py` to redraw them.
+| Learn mode | Report card | Every round |
+| :---: | :---: | :---: |
+| ![Learn mode](demo/learn-mode.png) | ![Report card](demo/report.png) | ![Every round](demo/every-round.png) |
+| *What the AI expected, and why (press `H`)* | *A title, how readable you were, the habits found* | *Every throw and what the AI expected* |
 
 ## The AI
 
