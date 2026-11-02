@@ -78,7 +78,7 @@ dialog textarea{width:100%;min-height:170px;font:13px/1.5 ui-monospace,Consolas,
 .pips{top:504px;display:flex;flex-direction:column;align-items:center;gap:8px}
 .pips div{display:flex;gap:8px}
 .pip{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:700 11px "Segoe UI",sans-serif;color:#fff;border:2px solid var(--track);background:var(--card)}
-.pip.w{background:var(--p);border-color:var(--p)} .pip.l{background:var(--a);border-color:var(--a)} .pip.d{background:var(--faint);border-color:var(--faint)}
+.pip.w{background:var(--win);border-color:var(--win)} .pip.l{background:var(--lose);border-color:var(--lose)} .pip.d{background:var(--faint);border-color:var(--faint)}
 .pip.now{border-color:var(--p);box-shadow:0 0 0 3px color-mix(in srgb,var(--p) 25%,transparent)}
 .streak{top:582px;font-size:14px;font-weight:700;color:var(--faint)}
 .streak b{color:var(--ink)}
@@ -90,7 +90,7 @@ dialog textarea{width:100%;min-height:170px;font:13px/1.5 ui-monospace,Consolas,
 <div class="layout">
   <div class="left">
     <h1>Face-off colour lab</h1>
-    <p>You on the left, the AI on the right, in one screen. Change the colours on the right and the screen updates straight away. Nothing here uses green or red, because those would suggest "good" and "bad". Wins and losses are shown in your colour and the AI's colour instead.</p>
+    <p>You on the left, the AI on the right, in one screen. Change the colours on the right and the screen updates straight away. Wins and losses can be green and red for strong contrast, or use your colour and the AI's colour instead. Pick below.</p>
     <div class="stage-wrap" id="sw"><div class="stage" id="stage"></div></div>
   </div>
   <aside class="panel">
@@ -104,6 +104,9 @@ dialog textarea{width:100%;min-height:170px;font:13px/1.5 ui-monospace,Consolas,
     <h3>AI colour</h3>
     <div class="sw" id="pal-a"></div>
     <label class="cp">Custom <input type="color" id="cu-a" value="#f97316"></label>
+
+    <h3>Win and loss colours</h3>
+    <div class="seg" id="rc"><button data-v="gr">Green / red</button><button data-v="pa">Your / AI colours</button></div>
 
     <h3>Behind the AI's hand</h3>
     <div class="sw sq" id="pal-h"></div>
@@ -122,14 +125,14 @@ dialog textarea{width:100%;min-height:170px;font:13px/1.5 ui-monospace,Consolas,
 <script>
 const IMG={ROCK:"../assets/gestures/rock.png",PAPER:"../assets/gestures/paper.png",SCISSORS:"../assets/gestures/scissors.png"};
 /* colours with no built-in meaning (no green, red or amber) */
-const ACCENTS=[["Blue","#2563eb"],["Sky","#0ea5e9"],["Cyan","#06b6d4"],["Teal","#0d9488"],["Indigo","#4f46e5"],["Violet","#7c3aed"],["Pink","#ec4899"],["Coral","#fb7185"],["Orange","#f97316"],["Slate","#475569"]];
+const ACCENTS=[["Blue","#2563eb"],["Sky","#0ea5e9"],["Cyan","#06b6d4"],["Teal","#0d9488"],["Indigo","#4f46e5"],["Violet","#7c3aed"],["Pink","#ec4899"],["Coral","#fb7185"],["Orange","#f97316"],["Slate","#475569"],["Green","#16a34a"],["Red","#dc2626"]];
 const HANDS=[["Charcoal","linear-gradient(160deg,#374151,#111827)"],["Midnight","linear-gradient(160deg,#1e293b,#0b1220)"],["Deep teal","linear-gradient(160deg,#0f766e,#134e4a)"],["Deep blue","linear-gradient(160deg,#1e40af,#172554)"],["Plum","linear-gradient(160deg,#6b21a8,#3b0764)"],["Sand","linear-gradient(160deg,#f6e7c7,#ecd29b)"],["Sunny","linear-gradient(160deg,#fde047,#fbbf24)"],["Sky","linear-gradient(160deg,#bae6fd,#7dd3fc)"],["Cloud","linear-gradient(160deg,#f1f5f9,#cbd5e1)"],["AI colour","accent"]];
 const MODES=[["Soft white",{bg:"#f4f6fb",card:"#ffffff",ink:"#14213d",muted:"#5a6785",faint:"#8e99b3",line:"#e1e6f2",chip:"#eef1f8",track:"#e3e8f4",shadow:"0 10px 32px rgba(20,33,61,.10)",tile:"#172554"},"#f4f6fb"],
  ["Cream",{bg:"#f8f1e3",card:"#fffaf0",ink:"#3a2a1c",muted:"#7d6a52",faint:"#a8957a",line:"#e6d8bb",chip:"#f1e6cc",track:"#eadfc5",shadow:"0 10px 28px rgba(90,60,20,.14)",tile:"#2e2433"},"#f8f1e3"],
  ["Cool grey",{bg:"#e3e7ee",card:"#f6f8fb",ink:"#1f2937",muted:"#5b6575",faint:"#8a93a3",line:"#d3d9e3",chip:"#e6eaf1",track:"#d9dee8",shadow:"0 10px 28px rgba(31,41,55,.14)",tile:"#1f2937"},"#e3e7ee"],
  ["Midnight",{bg:"#0b1020",card:"#141b33",ink:"#eef2ff",muted:"#9aa6d0",faint:"#6b78ad",line:"#2a3566",chip:"#1d2650",track:"#2a3566",shadow:"0 12px 40px rgba(0,0,0,.55)",tile:"#0a0f26"},"#0b1020"],
  ["Charcoal",{bg:"#14161b",card:"#1e2128",ink:"#f1f3f7",muted:"#9aa2b2",faint:"#6b7385",line:"#2d323d",chip:"#272b35",track:"#2d323d",shadow:"0 10px 30px rgba(0,0,0,.45)",tile:"#101217"},"#14161b"]];
-const DEF={p:"#2563eb",a:"#f97316",h:0,m:0,r:"p"};
+const DEF={p:"#0d9488",a:"#f97316",h:5,m:2,r:"p",g:"gr"};
 let S; try{ S=Object.assign({},DEF,JSON.parse(localStorage.getItem("rps-colour-lab")||"{}")); }catch(e){ S=Object.assign({},DEF); }
 const save=()=>{ try{ localStorage.setItem("rps-colour-lab",JSON.stringify(S)); }catch(e){} };
 
@@ -142,15 +145,15 @@ function skel(){ const pw=408,ph=382,k=pw/560*1.45,cx=pw/2,cy=ph*.56,P=SK.map(([
 
 const hint=(k,l)=>`<span><span class="kc">${k}</span> ${l}</span>`;
 const strip=(lit,c)=>`<div class="tiles" style="--c:${c}">${["ROCK","PAPER","SCISSORS"].map(m=>`<div class="tile ${lit===m?"lit":""}"><img src="${IMG[m]}" alt=""></div>`).join("")}</div>`;
-const CASES={p:{you:"PAPER",ai:"ROCK",res:"YOU WIN!",col:"var(--p)",why:"PAPER beats ROCK",delta:"+1 point for you",ys:4,as:4,last:"w"},
-             a:{you:"PAPER",ai:"SCISSORS",res:"AI WINS",col:"var(--a)",why:"SCISSORS beats PAPER",delta:"+1 point for the AI",ys:3,as:5,last:"l"},
+const CASES={p:{you:"PAPER",ai:"ROCK",res:"YOU WIN!",col:"var(--win)",why:"PAPER beats ROCK",delta:"+1 point for you",ys:4,as:4,last:"w"},
+             a:{you:"PAPER",ai:"SCISSORS",res:"AI WINS",col:"var(--lose)",why:"SCISSORS beats PAPER",delta:"+1 point for the AI",ys:3,as:5,last:"l"},
              d:{you:"PAPER",ai:"PAPER",res:"DRAW",col:"var(--muted)",why:"PAPER ties PAPER",delta:"No points this round",ys:3,as:4,last:"d"}};
 function render(){
   const c=CASES[S.r], st=document.getElementById("stage"), m=MODES[S.m][1];
   const h=HANDS[S.h], aip=h[1]==="accent" ? `linear-gradient(160deg,color-mix(in srgb,var(--a) 70%,#000),color-mix(in srgb,var(--a) 35%,#000))` : h[1];
-  const vars={"--p":S.p,"--a":S.a,"--bg":m.bg,"--card":m.card,"--ink":m.ink,"--muted":m.muted,"--faint":m.faint,"--line":m.line,"--chip":m.chip,"--track":m.track,"--shadow":m.shadow,"--tile":m.tile,"--aip":aip};
+  const vars={"--p":S.p,"--a":S.a,"--bg":m.bg,"--card":m.card,"--ink":m.ink,"--muted":m.muted,"--faint":m.faint,"--line":m.line,"--chip":m.chip,"--track":m.track,"--shadow":m.shadow,"--tile":m.tile,"--aip":aip,"--win":S.g==="gr"?"#16a34a":S.p,"--lose":S.g==="gr"?"#dc2626":S.a};
   Object.entries(vars).forEach(([k,v])=>st.style.setProperty(k,v));
-  st.style.setProperty("--ring", S.r==="a" ? "var(--a)" : "var(--p)");
+  st.style.setProperty("--ring", S.r==="a" ? "var(--lose)" : "var(--win)");
   const prev=["w","l","d","l","w","w","l","d",c.last];
   const pips=n=>{ let out=""; for(let i=n[0];i<n[1];i++){ const v=prev[i]; out+=`<span class="pip ${v||""} ${i===prev.length?"now":""}">${v?v.toUpperCase():""}</span>`; } return out; };
   st.innerHTML=`
@@ -170,6 +173,7 @@ function render(){
   <div class="hint">${hint("SPACE","Next round")}${hint("P","New player")}${hint("H","Learn mode")}${hint("Q","Quit")}</div>`;
   // the AI's own tile strip uses the AI's accent; tiles inside the AI card read --c
   document.getElementById("cu-p").value=S.p; document.getElementById("cu-a").value=S.a;
+  document.querySelectorAll("#rc button").forEach(b=>b.classList.toggle("on",b.dataset.v===S.g));
   document.querySelectorAll("#res button").forEach(b=>b.classList.toggle("on",b.dataset.v===S.r));
   document.querySelectorAll("#pal-p button").forEach((b,i)=>b.classList.toggle("on",ACCENTS[i][1]===S.p));
   document.querySelectorAll("#pal-a button").forEach((b,i)=>b.classList.toggle("on",ACCENTS[i][1]===S.a));
@@ -185,9 +189,10 @@ mk("pal-h",HANDS,i=>S.h=i,(x,i)=>x[1]==="accent"?"linear-gradient(160deg,#888,#4
 mk("pal-m",MODES,i=>S.m=i,x=>x[2]);
 document.getElementById("cu-p").oninput=e=>{ S.p=e.target.value; render(); };
 document.getElementById("cu-a").oninput=e=>{ S.a=e.target.value; render(); };
+document.getElementById("rc").onclick=e=>{ const b=e.target.closest("button"); if(b){ S.g=b.dataset.v; render(); } };
 document.getElementById("res").onclick=e=>{ const b=e.target.closest("button"); if(b){ S.r=b.dataset.v; render(); } };
 document.getElementById("reset").onclick=()=>{ S=Object.assign({},DEF); render(); };
-document.getElementById("copy").onclick=()=>{ document.getElementById("out").value=`My colour settings\nYour colour: ${S.p}\nAI colour: ${S.a}\nBehind the AI's hand: ${HANDS[S.h][0]}\nScreen style: ${MODES[S.m][0]}`; document.getElementById("dlg").showModal(); };
+document.getElementById("copy").onclick=()=>{ document.getElementById("out").value=`My colour settings\nYour colour: ${S.p}\nAI colour: ${S.a}\nBehind the AI's hand: ${HANDS[S.h][0]}\nWin and loss colours: ${S.g==="gr"?"green / red":"your / AI colours"}\nScreen style: ${MODES[S.m][0]}`; document.getElementById("dlg").showModal(); };
 document.getElementById("cl").onclick=()=>document.getElementById("dlg").close();
 document.getElementById("cp").onclick=()=>{ const o=document.getElementById("out"); o.select(); try{ document.execCommand("copy"); }catch(e){} };
 function fit(){ const w=document.getElementById("sw"); document.getElementById("stage").style.transform=`scale(${w.clientWidth/1280})`; }
