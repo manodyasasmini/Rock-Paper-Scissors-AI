@@ -20,7 +20,7 @@ Rock Paper Scissors AI is a real-time computer vision game. You play with your b
 Simple Rock Paper Scissors bots play at random or follow one fixed rule, so they are either pure luck or easy to beat. When an AI does learn from the player, the player rarely sees what it learned, and camera games often feel like a black box that is hard to trust.
 
 ## PROPOSED SOLUTION
-A webcam game where MediaPipe tracks 21 points on the hand and a geometric classifier reads rock, paper or scissors. Four small predictors learn the player's habits, the AI plays the counter to what it expects, and a report at the end explains what it noticed.
+A webcam game where MediaPipe tracks 21 points on the hand and a geometric classifier reads rock, paper or scissors. Four small predictors learn the player's habits, the AI usually plays the counter to what it expects, and a report at the end explains what it noticed.
 
 ## INNOVATIVE & UNIQUE FEATURES
 - Four predictors in one AI: how often you throw each move, what follows your last one or two moves, and how you react to a win or loss. The best performer counts most.
@@ -28,7 +28,7 @@ A webcam game where MediaPipe tracks 21 points on the hand and a geometric class
 - Forgets old habits, so it keeps up when you change tactics.
 - Honest numbers: every guess is shown beside the one-in-three chance level.
 - Leaderboard and Learn mode: the start screen ranks who beat the AI most. Press H to see what it expected after every round.
-- Private: no video is stored, and guests are never saved.
+- Private: no video is stored, guests are never saved, and a skeleton-only view can hide faces.
 
 ## TECHNOLOGIES USED
 - Python 3.12 - game logic, AI engine and tests
@@ -45,7 +45,7 @@ Caption: Camera frame → hand landmarks → move → game → AI reply (locked 
 
 ## DEMO / KEY SCREENS / WORKFLOW
 Pictures (in `demo/`): `05-ready.png`, `07-you-win.png`, `10-learn-mode.png`, `12-report.png`
-- Ready: live camera with the hand skeleton.
+- Ready: live camera with the hand skeleton and the match score.
 - Reveal: the AI's hand against yours. Its thinking stays hidden during play.
 - Learn mode: what the AI expected, with the one-in-three chance line.
 - Report card: a title, how well the AI read you, and the habits it found.
@@ -59,4 +59,4 @@ Workflow strip: NAME (join the leaderboard) › CAMERA CHECK (hold your hand up)
 
 **Expo trial:** add after the expo: number of players, average % of throws the AI predicted.
 
-**Next steps:** a skeleton-only privacy view, a kiosk mode for unattended use, and tuning the AI on real players.
+**Next steps:** tuning the AI on real players, an auto-restart launcher for unattended use, and saving the leaderboard to a file.

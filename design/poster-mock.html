@@ -149,12 +149,12 @@ body.nomarks .mk{display:none}
           </section>
           <section class="sec" data-mk="4">
             <h2>PROPOSED SOLUTION</h2>
-            <p>A webcam game where MediaPipe tracks 21 points on the hand and a geometric classifier reads rock, paper or scissors. Four small predictors learn the player's habits, the AI plays the counter to what it expects, and a summary at the end explains what it noticed.</p>
+            <p>A webcam game where MediaPipe tracks 21 points on the hand and a geometric classifier reads rock, paper or scissors. Four small predictors learn the player's habits, the AI usually plays the counter to what it expects, and a summary at the end explains what it noticed.</p>
           </section>
           <section class="sec" data-mk="5" style="margin-top:34px">
             <h2>DEMO / KEY SCREENS / WORKFLOW</h2>
             <div class="shots">
-              <figure><img src="poster-assets/arena-ready.png" alt="Ready screen"><figcaption><b>Ready:</b> live camera with the hand skeleton, and the three move tiles.</figcaption></figure>
+              <figure><img src="poster-assets/arena-ready.png" alt="Ready screen"><figcaption><b>Ready:</b> live camera with the hand skeleton, and the match score.</figcaption></figure>
               <figure><img src="poster-assets/result.png" alt="Result screen"><figcaption><b>Reveal:</b> the AI's hand against yours. Its thinking stays hidden during play.</figcaption></figure>
               <figure><img src="poster-assets/learn-mode.png" alt="Learn mode"><figcaption><b>Learn mode:</b> what the AI expected, with the one-in-three chance line.</figcaption></figure>
               <figure><img src="poster-assets/summary.png" alt="Summary screen"><figcaption><b>Report card:</b> a title, how well the AI read you, and the habits it found.</figcaption></figure>
@@ -180,7 +180,7 @@ body.nomarks .mk{display:none}
               <li><b>Forgets old habits,</b> so it keeps up when you change tactics.</li>
               <li><b>Honest numbers:</b> every guess is shown beside the one-in-three chance level.</li>
               <li><b>Leaderboard and Learn mode:</b> the start screen ranks who beat the AI most. Press H to see what it expected after every round.</li>
-              <li><b>Private:</b> no video is stored, and guests are never saved.</li>
+              <li><b>Private:</b> no video is stored, guests are never saved, and a skeleton-only view can hide faces.</li>
             </ul>
           </section>
           <section class="sec" data-mk="7">
@@ -204,7 +204,7 @@ body.nomarks .mk{display:none}
               <div class="b d" style="left:246px;top:106px">Game state machine<small>ready, countdown, reveal</small></div>
               <div class="b" style="left:0;top:106px">Display<small>OpenCV + Pillow</small></div>
               <div class="b d" style="left:246px;top:212px">Adaptive AI<small>four predictors</small></div>
-              <div class="b d" style="left:492px;top:212px">Match summary<small>what it learned</small></div>
+              <div class="b d" style="left:492px;top:212px">Match report<small>what it learned</small></div>
               <div class="b" style="left:0;top:212px">Players &amp; board<small>JSON file</small></div>
             </div>
             <p class="arch-cap">Camera frame → hand landmarks → move → game → AI reply (locked before the throw is read).</p>
@@ -225,7 +225,7 @@ body.nomarks .mk{display:none}
             <p><b>Impact:</b> in about two minutes visitors see how an AI learns from behaviour, and why being unpredictable beats it.</p>
             <p><b>Results (simulation, 400 games of 30 rounds):</b> about fair against a random player, and the AI wins 84-91% of rounds against players with a pattern (R-R-P, win-stay/lose-shift, counter-the-AI).</p>
             <p><b>Expo trial:</b> <span class="todo-text">add results: number of players, average % of throws the AI predicted</span></p>
-            <p><b>Next steps:</b> a skeleton-only privacy view, a kiosk mode for unattended use, and tuning the AI on real players.</p>
+            <p><b>Next steps:</b> tuning the AI on real players, an auto-restart launcher for unattended use, and saving the leaderboard to a file.</p>
           </section>
         </div>
 
