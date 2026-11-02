@@ -294,12 +294,24 @@ engine.observe(player_move, outcome) -> str  # learns, returns the explanation
 Each phase ends with something runnable.
 
 ### Phase 0: Safe starting point
-- [ ] Commit the outstanding work on `rps_game.py` and `.gitignore`, then create a `redesign` branch
-- [ ] Fix `requirements.txt` to rely on `opencv-contrib-python`, and rebuild the venv to confirm it runs
-- [ ] Add `pytest` as a dev dependency
-- [ ] Measure baseline FPS on the exhibition laptop, or the closest available machine
+- [x] Create a `redesign` branch and commit the outstanding work on `rps_game.py` and `.gitignore`
+- [x] Fix `requirements.txt` to rely on `opencv-contrib-python`, pin tested versions, and repair the venv
+- [x] Add `pytest` as a dev dependency (`requirements-dev.txt`)
+- [x] Measure baseline timings on the closest available machine
+- [ ] Play a full round of the current game on the repaired venv
 
 **Done when:** the current game runs from a clean install and baseline FPS is recorded.
+
+**Baseline, 2026-11-02** (Ryzen 5 7640HS, CPU only, 1280 × 720 webcam, no hand in view, `imshow` not included, not necessarily the exhibition laptop):
+
+| Step | Median | 95th percentile |
+|---|---|---|
+| Camera read | 3.3 ms | 16.5 ms |
+| MediaPipe | 18.2 ms | 25.2 ms |
+| UI render at 720p | 27.1 ms | 42.2 ms |
+| UI render at 1080p | 44.5 ms | 67.3 ms |
+
+This estimates about 20 FPS for the current game, below the 24 FPS target. UI rendering costs more than hand tracking, and a 1080p canvas would make it worse, so the rendering work in section 6 is required. Timings with a hand in view still need measuring.
 
 ### Phase 1: Structure
 - [ ] Create the modules and move logic over with the same behaviour

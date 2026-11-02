@@ -1,4 +1,7 @@
-opencv-python>=4.8.0
+# Pinned to the versions the game is tested on.
+# mediapipe installs opencv-contrib-python, which provides cv2.
+# Do not add opencv-python as well: both packages supply the same module.
 mediapipe==0.10.14
-Pillow>=9.5.0
-numpy>=1.24.0
+opencv-contrib-python==4.11.0.86
+numpy==1.26.4
+Pillow==13.0.0
