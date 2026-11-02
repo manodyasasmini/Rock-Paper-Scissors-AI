@@ -27,3 +27,8 @@ rock-paper-scissors-banners-with-hand-gestures/
 
 settings.json
 settings.json.tmp
+
+# Personal folders that should not be published
+poster/
+design/screenshots/
+*.whl
