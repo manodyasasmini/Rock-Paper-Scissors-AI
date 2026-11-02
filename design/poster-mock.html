@@ -157,14 +157,14 @@ body.nomarks .mk{display:none}
               <figure><img src="poster-assets/arena-ready.png" alt="Ready screen"><figcaption><b>Ready:</b> live camera with the hand skeleton, and the three move tiles.</figcaption></figure>
               <figure><img src="poster-assets/result.png" alt="Result screen"><figcaption><b>Reveal:</b> the AI's hand against yours. Its thinking stays hidden during play.</figcaption></figure>
               <figure><img src="poster-assets/learn-mode.png" alt="Learn mode"><figcaption><b>Learn mode:</b> what the AI expected, with the one-in-three chance line.</figcaption></figure>
-              <figure><img src="poster-assets/summary.png" alt="Summary screen"><figcaption><b>Summary:</b> how well the AI read you, and the habits it found.</figcaption></figure>
+              <figure><img src="poster-assets/summary.png" alt="Summary screen"><figcaption><b>Report card:</b> a title, how well the AI read you, and the habits it found.</figcaption></figure>
             </div>
             <div class="flow">
-              <div>SHOW HAND<small>camera sees you</small></div><i>›</i>
+              <div>NAME<small>join the leaderboard</small></div><i>›</i>
+              <div>CAMERA CHECK<small>hold your hand up</small></div><i>›</i>
               <div>COUNTDOWN<small>AI locks its move</small></div><i>›</i>
-              <div>THROW<small>gesture is read</small></div><i>›</i>
-              <div>REVEAL<small>winner shown</small></div><i>›</i>
-              <div>SUMMARY<small>what it learned</small></div>
+              <div>THROW + REVEAL<small>gesture read, winner shown</small></div><i>›</i>
+              <div>REPORT<small>what it learned</small></div>
             </div>
             <p class="todo-text" style="display:inline-block;margin-top:10px;padding-left:6px;font-size:15px">Replace these four pictures with real screenshots of the finished game.</p>
           </section>
@@ -179,7 +179,7 @@ body.nomarks .mk{display:none}
               <li><b>Fair by design:</b> the AI locks its move before your throw is read.</li>
               <li><b>Forgets old habits,</b> so it keeps up when you change tactics.</li>
               <li><b>Honest numbers:</b> every guess is shown beside the one-in-three chance level.</li>
-              <li><b>Two modes:</b> Challenge hides the AI's thinking, Learn shows it after every round.</li>
+              <li><b>Leaderboard and Learn mode:</b> the start screen ranks who beat the AI most. Press H to see what it expected after every round.</li>
               <li><b>Private:</b> no video is stored, and guests are never saved.</li>
             </ul>
           </section>
@@ -205,7 +205,7 @@ body.nomarks .mk{display:none}
               <div class="b" style="left:0;top:106px">Display<small>OpenCV + Pillow</small></div>
               <div class="b d" style="left:246px;top:212px">Adaptive AI<small>four predictors</small></div>
               <div class="b d" style="left:492px;top:212px">Match summary<small>what it learned</small></div>
-              <div class="b" style="left:0;top:212px">Player profiles<small>JSON file</small></div>
+              <div class="b" style="left:0;top:212px">Players &amp; board<small>JSON file</small></div>
             </div>
             <p class="arch-cap">Camera frame → hand landmarks → move → game → AI reply (locked before the throw is read).</p>
           </section>
@@ -217,7 +217,7 @@ body.nomarks .mk{display:none}
               <li><b>OpenCV</b> - camera capture, window and skeleton drawing</li>
               <li><b>NumPy</b> - the AI's decaying probability tables</li>
               <li><b>Pillow</b> - text, panels and the gesture artwork</li>
-              <li><b>JSON</b> - saved player profiles</li>
+              <li><b>JSON</b> - saved player profiles and the leaderboard</li>
                           </ul>
           </section>
           <section class="sec" data-mk="9">
@@ -225,7 +225,7 @@ body.nomarks .mk{display:none}
             <p><b>Impact:</b> in about two minutes visitors see how an AI learns from behaviour, and why being unpredictable beats it.</p>
             <p><b>Results (simulation, 400 games of 30 rounds):</b> about fair against a random player, and the AI wins 84-91% of rounds against players with a pattern (R-R-P, win-stay/lose-shift, counter-the-AI).</p>
             <p><b>Expo trial:</b> <span class="todo-text">add results: number of players, average % of throws the AI predicted</span></p>
-            <p><b>Next steps:</b> start screen and leaderboard, a skeleton-only privacy view, and tuning the AI on real players.</p>
+            <p><b>Next steps:</b> a skeleton-only privacy view, a kiosk mode for unattended use, and tuning the AI on real players.</p>
           </section>
         </div>
 

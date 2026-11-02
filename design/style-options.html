@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rock Paper Scissors AI - style options</title>
+<style>
+:root{color-scheme:light;--page:#eef1f7;--card:#fff;--line:#d9dfec;--text:#14213d;--muted:#5a6785;--p:#2563eb}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:15px/1.55 "Segoe UI",system-ui,sans-serif}
+h1,h2,h3,p{margin:0}
+.intro{max-width:1500px;margin:0 auto;padding:36px 24px 8px}
+.intro h1{font-size:30px}
+.intro p{color:var(--muted);max-width:900px;margin-top:10px}
+.wrap{max-width:1500px;margin:0 auto;padding:10px 24px 100px}
+.opt{margin:36px 0 56px}
+.ohead{display:flex;gap:12px;align-items:center;margin-bottom:4px}
+.letter{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#fff;border:1px solid #c4cde0;font-weight:800}
+.ohead h2{font-size:22px}
+.tag{color:var(--muted);margin:0 0 14px}
+.body{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:22px;align-items:start}
+.stage-wrap{position:relative;width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;border:1px solid #c9d2e4;box-shadow:0 6px 24px rgba(30,45,90,.12)}
+.side{display:flex;flex-direction:column;gap:12px}
+.sw{display:flex;gap:6px;flex-wrap:wrap}
+.sw i{width:38px;height:38px;border-radius:10px;border:1px solid rgba(0,0,0,.18)}
+.side .lbl{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-weight:700}
+.side ul{margin:0;padding-left:18px;color:#2b3750;font-size:14px}
+.dec{display:flex;gap:6px}
+button{font:inherit;cursor:pointer}
+.dec button{flex:1;padding:8px 6px;border-radius:10px;border:1px solid #c4cde0;background:#fff;color:var(--text)}
+.dec button.on[data-v=fav]{background:#dff5e9;border-color:#16a34a;color:#0a5c36;font-weight:700}
+.dec button.on[data-v=maybe]{background:#fff0cc;border-color:#f59e0b;color:#7a4d00;font-weight:700}
+.dec button.on[data-v=no]{background:#fde3e6;border-color:#dc2626;color:#8e1c27;font-weight:700}
+textarea{width:100%;min-height:80px;resize:vertical;background:#fff;border:1px solid #c4cde0;border-radius:10px;padding:10px 12px;font:inherit;color:var(--text)}
+.btn{background:#fff;border:1px solid #c4cde0;border-radius:10px;padding:8px 14px}
+.btn.primary{background:var(--p);border-color:var(--p);color:#fff;font-weight:600}
+dialog{width:min(700px,92vw);border:1px solid #c4cde0;border-radius:16px;padding:20px}
+dialog textarea{min-height:260px;font:13px/1.5 ui-monospace,Consolas,monospace}
+dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;align-items:center}
+@media (max-width:1100px){.body{grid-template-columns:1fr}}
+
+/* ---------- the 1280 x 720 stage (same parts as the screens page) ---------- */
+.stage{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;overflow:hidden;font-family:"Segoe UI",system-ui,sans-serif}
+.stage *{box-sizing:border-box}
+.a{position:absolute}
+.t{white-space:nowrap;line-height:1.15}
+.card{border-radius:22px}
+.chip{display:flex;align-items:center;gap:7px;padding:0 12px;border-radius:999px;font-size:14px;font-weight:600;white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;flex:none}
+.cam{overflow:hidden;border-radius:16px;background:#222}
+.room{position:absolute;inset:0;background:radial-gradient(circle at 17% 38%,#e8dccd 0 8%,transparent 8.6%),linear-gradient(115deg,#a07c6c,#b0808a 55%,#a9a46c);filter:blur(1.2px)}
+.room::after{content:"";position:absolute;right:6%;top:18%;width:20%;height:62%;background:#76594b;opacity:.75;filter:blur(7px)}
+.cam svg{position:absolute;inset:0;width:100%;height:100%}
+.aip{border-radius:16px;overflow:hidden}
+.aip img{position:absolute}
+.tile{border-radius:14px;overflow:hidden}
+.tile img{position:absolute;left:50%;top:6px;transform:translateX(-50%);opacity:.34}
+.tile.none img{opacity:.62}
+.tile.lit img{opacity:1}
+.ribbon{display:grid;place-items:center;border-radius:999px;color:#fff;font:800 13px "Segoe UI",sans-serif;letter-spacing:2px}
+.sc{border-radius:16px;border:2px solid}
+.pip{display:grid;place-items:center;border-radius:50%;font:700 11px "Segoe UI",sans-serif;color:#fff}
+.hint{display:flex;gap:26px;align-items:center;justify-content:center;font-size:15px}
+.kc{display:inline-block;min-width:26px;padding:2px 8px;border:1px solid;border-bottom-width:3px;border-radius:8px;font-weight:700;font-size:13px;text-align:center}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<header class="intro">
+  <h1>Style options</h1>
+  <p>The same screen, the moment you beat the AI, in five different looks. Only colours and style change: the layout and everything on screen is the same. Pick a favourite, say what you'd tweak (a different accent colour, rounder or sharper corners, bigger text), and I'll apply it to every screen.</p>
+</header>
+<div class="wrap" id="wrap"></div>
+<dialog id="dlg">
+  <h3 style="margin-bottom:6px">Your choice</h3>
+  <p style="color:var(--muted);margin-bottom:12px">Paste this into the chat. If Copy doesn't work, click in the box and press Ctrl+A then Ctrl+C.</p>
+  <textarea id="out" readonly></textarea>
+  <div class="row"><span id="copied" style="color:#16a34a"></span><button class="btn" id="close">Close</button><button class="btn primary" id="copy">Copy</button></div>
+</dialog>
+
+<script>
+const K = {bg:"#f4f6fb",ink:"#14213d",ink2:"#33415f",muted:"#5a6785",faint:"#8e99b3",line:"#dbe1ee",
+  p:"#2563eb",pD:"#1d4ed8",pT:"#e8efff",pL:"#9db9f7",a:"#db2777",aD:"#be185d",aT:"#fde8f2",aL:"#f3a6cb",
+  green:"#16a34a",greenD:"#0f7a37",greenT:"#e3f6e9",red:"#dc2626",redD:"#b01919",redT:"#fdeaea",
+  amber:"#f59e0b",amberD:"#9a5b00",amberT:"#fff3d6",navy:"#172554"};
+const CH = {W:K.green,L:K.red,D:K.amber};
+const CREDIT = "Created by SMS Abeyrathne · 235501H · BSc (Hons) Artificial Intelligence";
+const IMG = {ROCK:"../assets/gestures/rock.png", PAPER:"../assets/gestures/paper.png", SCISSORS:"../assets/gestures/scissors.png"};
+const MOVES = ["ROCK","PAPER","SCISSORS"];
+const BEATS = {ROCK:"SCISSORS", PAPER:"ROCK", SCISSORS:"PAPER"};
+const outcome = (p,a) => p===a ? "D" : (BEATS[p]===a ? "W" : "L");
+const GRAD = {ROCK:"linear-gradient(170deg,#3b1a6b,#1d6a8a)",PAPER:"linear-gradient(170deg,#6a1b73,#d9772b)",SCISSORS:"linear-gradient(170deg,#0f6f86,#5a3320)"};
+
+const A = (x,y,w,h,c,i="",s="") => `<div class="a ${c}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;${s}">${i}</div>`;
+const T = (x,y,txt,o={}) => {
+  const {s=16,c=K.ink,b=false,al="l",st=""} = o;
+  const tr = al==="c" ? "translate(-50%,-50%)" : al==="r" ? "translate(-100%,-50%)" : "translate(0,-50%)";
+  return `<div class="a t" style="left:${x}px;top:${y}px;transform:${tr};font-size:${s}px;color:${c};font-weight:${b?700:400};${st}">${txt}</div>`;
+};
+const img = (m,h,st="") => `<img src="${IMG[m]}" alt="${m}" style="height:${h}px;${st}">`;
+const mk = (n,x,y) => `<div class="mark" style="left:${x-15}px;top:${y-15}px">${n}</div>`;
+const kc = t => `<span class="kc">${t}</span>`;
+const hint = (items,y=656,x=140,w=1000) => `<div class="a hint" style="left:${x}px;top:${y}px;width:${w}px;height:44px">${items.map(([k,l])=>`<span>${kc(k)} ${l}</span>`).join("")}</div>`;
+const chipAt = (x,y,txt,col,bg,al="r") => T(x,y,`<span class="dot" style="background:${col}"></span>${txt}`,{al,s:14,b:1,c:col,st:`display:flex;align-items:center;gap:7px;background:${bg};border-radius:999px;padding:6px 13px;`});
+
+/* ---- hand skeleton: white halo under a blue line, scaled to whatever size the camera panel is ---- */
+const SK = [[285,262],[252,245],[228,222],[212,198],[201,176],[258,200],[252,168],[249,146],[247,126],[284,194],[284,158],[284,134],[284,112],[311,200],[316,168],[319,147],[321,128],[334,212],[345,187],[351,170],[356,154]];
+const CONN = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+function skeleton(pw,ph){
+  const k=pw/560*1.45, cx=pw/2, cy=ph*0.56, P=SK.map(([x,y])=>[cx+(x-285)*k, cy+(y-190)*k]);
+  const lines = CONN.map(([a,b])=>`<line x1="${P[a][0]}" y1="${P[a][1]}" x2="${P[b][0]}" y2="${P[b][1]}"/>`).join("");
+  const dots = P.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="5.4" fill="#fff" stroke="${K.p}" stroke-width="2.4"/>`).join("");
+  return `<svg viewBox="0 0 ${pw} ${ph}"><g stroke="#fff" stroke-width="9" stroke-linecap="round" opacity=".92">${lines}</g><g stroke="${K.p}" stroke-width="3.6" stroke-linecap="round">${lines}</g>${dots}</svg>`;
+}
+function holdRing(pw,ph,pct){
+  const cx=pw/2, cy=ph*0.56, r=Math.min(pw,ph)*0.36, C=2*Math.PI*r;
+  return `<svg viewBox="0 0 ${pw} ${ph}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="10"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${K.p}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C*pct} ${C}" transform="rotate(-90 ${cx} ${cy})"/></svg>`;
+}
+const camInner = (pw,ph,o={}) => (o.skeletonOnly
+  ? `<div class="a" style="inset:0;background:#eaf0fb;background-image:linear-gradient(#d3ddf0 1px,transparent 1px),linear-gradient(90deg,#d3ddf0 1px,transparent 1px);background-size:28px 28px"></div>`
+  : `<div class="room"></div>`) + (o.hand===false ? "" : skeleton(pw,ph));
+const pillText = (cx,cy,txt,color,o={}) => T(cx,cy,txt,{al:"c",s:o.s||15,b:true,c:color,
+  st:`background:rgba(255,255,255,.95);border:1.5px solid ${color};border-radius:22px;padding:${o.pv||7}px ${o.ph||16}px;box-shadow:0 2px 10px rgba(0,0,0,.2);`});
+
+/* ============================ the face-off arena ============================ */
+const moveStrip = (x,y,w,hh,lit,side) => { const gap=14, tw=Math.floor((w-2*gap)/3);
+  return MOVES.map((m,i)=>A(x+i*(tw+gap),y,tw,hh,`tile ${side} ${lit===m?"lit":""} ${lit?"":"none"}`,img(m,hh-10))).join(""); };
+const aiHang = (m,hgt=374) => `<img src="${IMG[m]}" alt="${m}" style="height:${hgt}px;top:4px;left:50%;transform:translateX(-50%) rotate(180deg)">`;
+const aiIdle = (a,b) => T(204,160,a,{s:34,b:1,c:"#d9b8f0",al:"c"})+T(204,204,b,{s:17,c:"#f0d4ea",al:"c"});
+
+function learnPanel(probs,thrown,evidence,text){
+  const top = Object.keys(probs).reduce((a,b)=>probs[a]>=probs[b]?a:b), base=106, maxH=68;
+  let h = "";
+  MOVES.forEach((m,i)=>{
+    const x=16+i*60, hh=Math.max(6,Math.round(maxH*probs[m])), me=m===thrown;
+    h += A(x,base-hh,44,hh,"","",`background:${m===top?K.a:K.aL};border-radius:8px 8px 4px 4px;${me?"outline:3px solid "+K.p+";outline-offset:2px":""}`);
+    h += T(x+22,base-hh-11,Math.round(probs[m]*100)+"%",{s:13,b:1,c:K.ink2,al:"c"});
+    h += T(x+22,base+14,m.slice(0,1)+m.slice(1).toLowerCase(),{s:11,b:1,c:me?K.p:K.muted,al:"c"});
+  });
+  h += A(8,base-Math.round(maxH/3),190,0,"","","border-top:1.5px dashed "+K.faint)+T(196,base-Math.round(maxH/3)-8,"chance",{s:10,c:K.faint,al:"r"});
+  const ec={LOW:K.amberD,MEDIUM:K.pD,HIGH:K.greenD}[evidence];
+  h += T(206,16,`EVIDENCE: ${evidence}`,{s:12,b:1,c:ec});
+  h += A(206,32,194,104,"",text,"font-size:13.5px;line-height:17px;color:"+K.ink2+";white-space:normal");
+  return A(828,482,408,140,"","", `background:${K.aT};border:1px solid ${K.aL};border-radius:14px;overflow:hidden`).replace("</div>",h+"</div>");
+}
+
+function centerCol(o){
+  const {round=1,you=0,ai=0,pips=[],cur=-1,streak=0,best=0,mid=""} = o;
+  let h = A(488,24,304,616,"card");
+  h += T(640,58,"ROUND",{s:12,b:1,c:K.faint,al:"c",st:"letter-spacing:3px"});
+  h += T(640,98,`${round}<span style="font-size:24px;color:${K.faint}"> / 15</span>`,{s:50,b:1,c:K.ink,al:"c"});
+  h += A(508,140,126,88,"sc",T(63,20,"YOU",{s:13,b:1,c:K.p,al:"c"})+T(63,56,you,{s:44,b:1,c:K.ink,al:"c"}),`background:${K.pT};border-color:${K.p}`);
+  h += A(646,140,126,88,"sc",T(63,20,"AI",{s:13,b:1,c:K.a,al:"c"})+T(63,56,ai,{s:44,b:1,c:K.ink,al:"c"}),`background:${K.aT};border-color:${K.a}`);
+  h += mid;
+  for(let i=0;i<15;i++){
+    const row=i<8?0:1, idx=row?i-8:i, n=row?7:8, x0=640-(n*24+(n-1)*8)/2, x=x0+idx*32, y=528+row*36, r=pips[i];
+    h += A(x,y,24,24,"pip",r||"",r?`background:${CH[r]}`:`border:2px solid ${i===cur?K.p:K.line};${i===cur?"box-shadow:0 0 0 3px rgba(37,99,235,.2)":""};background:${K.card}`);
+  }
+  h += T(640,612,streak?`<span style="color:${K.amberD}">STREAK ${streak}</span> <span style="color:${K.faint}">· best ${best}</span>`:`<span style="color:${K.faint}">No streak yet</span>`,{s:14,b:1,al:"c"});
+  return h;
+}
+
+function arena(o){
+  const {name="MANO",status=["Hand detected",K.greenD,K.greenT],cam,lit=null,aiPanel,aiLit=null,learn=null,win=null,mode="Challenge",center,hintItems} = o;
+  let h = A(28,24,440,616,"card p"+(win==="p"?" win-p":""));
+  h += T(52,56,name,{s:26,b:1,c:K.p});
+  h += chipAt(452,56,status[0],status[1],status[2]);
+  h += A(44,86,408,382,"cam",cam);
+  h += moveStrip(44,482,408,140,lit,"p");
+  h += A(812,24,440,616,"card ai"+(win==="a"?" win-a":""));
+  h += T(836,56,"ADAPTIVE AI",{s:22,b:1,c:K.a});
+  h += chipAt(1236,56,mode,mode==="Learn mode"?K.pD:K.muted,mode==="Learn mode"?K.pT:K.chip);
+  h += A(828,86,408,382,"aip",aiPanel);
+  h += learn ? learnPanel(...learn) : moveStrip(828,482,408,140,aiLit,"ai");
+  if(win==="p") h += A(300,10,160,28,"ribbon","WINNER");
+  if(win==="a") h += A(1084,10,160,28,"ribbon","WINNER");
+  h += center;
+  h += hint(hintItems||[["SPACE","Start round"],["P","New player"],["H","Learn mode"],["Q","Quit"]]);
+  return h;
+}
+
+/* ---- middle-of-the-column states ---- */
+const midReady = () => T(640,282,"GET READY",{s:30,b:1,c:K.ink,al:"c"}) +
+  A(572,310,136,136,"","▶",`border-radius:50%;background:${K.p};color:#fff;display:grid;place-items:center;font-size:54px;padding-left:8px;box-shadow:0 12px 28px rgba(37,99,235,.4)`) +
+  T(640,478,`Press ${kc("SPACE")}`,{s:15,c:K.muted,al:"c"}) + T(640,502,"or hold your hand still for 2 s",{s:14,c:K.faint,al:"c"});
+const midCount = (n,pct) => A(550,262,180,180,"","",`border-radius:50%;background:conic-gradient(${K.p} ${pct}%,${K.track} 0)`) + A(560,272,160,160,"","",`border-radius:50%;background:${K.card}`) +
+  T(640,352,n,{s:112,b:1,c:K.p,al:"c"}) +
+  T(640,468,`<span style="color:${K.faint}">ROCK ·</span> <span style="color:${K.p}">PAPER</span> <span style="color:${K.faint}">· SCISSORS · SHOOT!</span>`,{s:14,b:1,al:"c"});
+function midReveal(kind,pm,am,text,delta){
+  const c={p:[K.greenD,"YOU WIN!"],a:[K.redD,"AI WINS"],t:[K.amberD,"DRAW"]}[kind];
+  return T(640,268,c[1],{s:36,b:1,c:c[0],al:"c"}) +
+    A(516,296,116,132,"tile lit p",img(pm,122)) + A(648,296,116,132,"tile lit ai",img(am,122,"transform:translateX(-50%) rotate(180deg);top:2px")) +
+    T(640,362,"vs",{s:14,b:1,c:K.faint,al:"c"}) +
+    T(640,452,text,{s:15,b:1,c:K.ink2,al:"c"}) + T(640,480,delta,{s:14,c:c[0],al:"c",b:1});
+}
+const midMissed = () => T(640,276,"MISSED IT",{s:34,b:1,c:K.amberD,al:"c"}) +
+  A(580,304,120,120,"","?",`border-radius:50%;background:${K.amberT};border:3px dashed ${K.amber};color:${K.amberD};display:grid;place-items:center;font:800 56px 'Segoe UI',sans-serif`) +
+  A(508,436,264,60,"","No gesture was seen, so this round doesn't count. Go again!","font-size:15px;line-height:20px;color:"+K.muted+";text-align:center;white-space:normal");
+
+
+const BASE = Object.assign({}, K, {card:"#ffffff", track:"#e3e8f4", chip:"#eef1f8"});
+const PIPS9 = ["W","L","D","L","W","W","L","D"];
+
+/* each look: colour tokens (K), plus a little CSS for the parts that are styled in the stylesheet */
+const THEMES = [
+ {id:"a", name:"Arcade Night", tag:"Dark navy with neon cyan and pink. Feels like a game cabinet; the hands glow.",
+  font:"'Segoe UI',system-ui,sans-serif",
+  K:{ink:"#eef2ff",ink2:"#c7d0f5",muted:"#93a0d0",faint:"#6b78ad",line:"#2a3566",card:"#131a38",track:"#2a3566",chip:"#1d2650",
+     p:"#22d3ee",pD:"#67e8f9",pT:"#0e3a52",pL:"#155e75",a:"#f472b6",aD:"#f9a8d4",aT:"#4a1642",aL:"#9d174d",
+     green:"#34d399",greenD:"#6ee7b7",greenT:"#0b3b30",red:"#f87171",redD:"#fca5a5",redT:"#451a1a",amber:"#fbbf24",amberD:"#fcd34d",amberT:"#3d300a"},
+  css:{bg:"radial-gradient(circle at 12% 8%,rgba(34,211,238,.18),transparent 40%),radial-gradient(circle at 90% 92%,rgba(244,114,182,.18),transparent 42%),#0a0f24",
+       card:"#131a38",cardB:"1px solid #2a3566",shadow:"0 0 0 1px rgba(34,211,238,.08),0 12px 40px rgba(0,0,0,.55)",
+       tile:"#0b1030",tileB:"1px solid #2a3566",litP:"#0e3a52",litA:"#4a1642",aip:"linear-gradient(160deg,#1b0f3d,#3b1456 60%,#1a1040)",
+       glow:"0 0 0 3px #34d399,0 0 40px rgba(52,211,153,.55)",hintC:"#93a0d0",kc:"background:#1d2650;border-color:#2a3566;color:#c7d0f5",ribbon:"#16a34a",radius:"22px"}},
+ {id:"b", name:"Warm Paper", tag:"Cream paper with teal and terracotta, and a serif face. Calm, friendly, a little retro.",
+  font:"Georgia,'Times New Roman',serif",
+  K:{ink:"#3a2a1c",ink2:"#5a4733",muted:"#7d6a52",faint:"#a8957a",line:"#e6d8bb",card:"#fffaf0",track:"#eadfc5",chip:"#f1e6cc",
+     p:"#0f766e",pD:"#115e59",pT:"#d7f0ec",pL:"#7cc7bf",a:"#c2410c",aD:"#9a3412",aT:"#fde4d0",aL:"#f0a77c",
+     green:"#3f8f3f",greenD:"#2f6f2f",greenT:"#e2f1d9",red:"#b91c1c",redD:"#991b1b",redT:"#fbe3e0",amber:"#d97706",amberD:"#92500a",amberT:"#fdeccd"},
+  css:{bg:"radial-gradient(circle at 10% 6%,rgba(15,118,110,.10),transparent 38%),radial-gradient(circle at 92% 94%,rgba(194,65,12,.10),transparent 40%),#f7efe0",
+       card:"#fffaf0",cardB:"1px solid #e6d8bb",shadow:"0 10px 28px rgba(90,60,20,.14)",
+       tile:"#2e2433",tileB:"1px solid #4a3a52",litP:"#134e4a",litA:"#6b2a10",aip:"linear-gradient(160deg,#4a2232,#7a2f2a 60%,#4a2a2a)",
+       glow:"0 0 0 4px rgba(63,143,63,.45),0 12px 36px rgba(63,143,63,.3)",hintC:"#7d6a52",kc:"background:#fffaf0;border-color:#d9c9a5;color:#5a4733",ribbon:"#3f8f3f",radius:"22px"}},
+ {id:"c", name:"Bold Pop", tag:"Sunny yellow, thick black outlines and hard shadows. Loud and playful, readable across a hall.",
+  font:"'Trebuchet MS','Segoe UI',sans-serif",
+  K:{ink:"#111111",ink2:"#222222",muted:"#3c3c3c",faint:"#6a6a6a",line:"#111111",card:"#ffffff",track:"#e4e4e4",chip:"#ffffff",
+     p:"#2563eb",pD:"#1d4ed8",pT:"#cfe0ff",pL:"#8fb2ff",a:"#ff3d81",aD:"#c4004f",aT:"#ffd1e3",aL:"#ff8fb7",
+     green:"#00b86b",greenD:"#006b3f",greenT:"#c8f5dd",red:"#e11d48",redD:"#9f1239",redT:"#ffd9e0",amber:"#f59e0b",amberD:"#7a4d00",amberT:"#ffe9a8"},
+  css:{bg:"radial-gradient(circle at 15% 15%,rgba(255,255,255,.5) 0 90px,transparent 91px),radial-gradient(circle at 88% 85%,rgba(255,255,255,.35) 0 120px,transparent 121px),#ffd84a",
+       card:"#ffffff",cardB:"3px solid #111",shadow:"7px 7px 0 #111",
+       tile:"#111111",tileB:"3px solid #111",litP:"#1b2a6b",litA:"#7a1040",aip:"linear-gradient(160deg,#5b21b6,#c026d3)",
+       glow:"7px 7px 0 #111,0 0 0 6px #00b86b",hintC:"#111",kc:"background:#fff;border-color:#111;color:#111",ribbon:"#00b86b",radius:"18px"}},
+ {id:"d", name:"Graphite", tag:"Calm charcoal with teal and orange. Less neon than Arcade Night, easier on the eyes in a dim room.",
+  font:"'Segoe UI',system-ui,sans-serif",
+  K:{ink:"#f1f3f7",ink2:"#cdd2dc",muted:"#98a0b0",faint:"#6b7385",line:"#2b303b",card:"#1c1f27",track:"#2b303b",chip:"#262a34",
+     p:"#2dd4bf",pD:"#5eead4",pT:"#123a38",pL:"#14625b",a:"#fb923c",aD:"#fdba74",aT:"#432a15",aL:"#9a4f12",
+     green:"#4ade80",greenD:"#86efac",greenT:"#10331f",red:"#f87171",redD:"#fca5a5",redT:"#401818",amber:"#fbbf24",amberD:"#fcd34d",amberT:"#3a2c0a"},
+  css:{bg:"radial-gradient(circle at 12% 8%,rgba(45,212,191,.10),transparent 40%),radial-gradient(circle at 90% 92%,rgba(251,146,60,.10),transparent 42%),#12141a",
+       card:"#1c1f27",cardB:"1px solid #2b303b",shadow:"0 10px 30px rgba(0,0,0,.45)",
+       tile:"#0f1116",tileB:"1px solid #2b303b",litP:"#123a38",litA:"#432a15",aip:"linear-gradient(160deg,#2a1d12,#4a2a14 60%,#2a1b12)",
+       glow:"0 0 0 3px #4ade80,0 0 30px rgba(74,222,128,.4)",hintC:"#98a0b0",kc:"background:#262a34;border-color:#2b303b;color:#cdd2dc",ribbon:"#16a34a",radius:"20px"}},
+ {id:"e", name:"Sunset Glass", tag:"A purple-to-orange gradient with frosted cards. The most 'designed' of the five, and the most colourful.",
+  font:"'Segoe UI',system-ui,sans-serif",
+  K:{ink:"#ffffff",ink2:"#f5eaff",muted:"#e6d3fb",faint:"#d0b4f2",line:"rgba(255,255,255,.3)",card:"rgba(40,20,80,.55)",track:"rgba(255,255,255,.25)",chip:"rgba(255,255,255,.18)",
+     p:"#38bdf8",pD:"#7dd3fc",pT:"rgba(56,189,248,.24)",pL:"#0369a1",a:"#fb7185",aD:"#fda4af",aT:"rgba(251,113,133,.26)",aL:"#be123c",
+     green:"#4ade80",greenD:"#bbf7d0",greenT:"rgba(34,197,94,.28)",red:"#f87171",redD:"#fecaca",redT:"rgba(248,113,113,.26)",amber:"#fbbf24",amberD:"#fde68a",amberT:"rgba(251,191,36,.26)"},
+  css:{bg:"linear-gradient(135deg,#1e1b4b,#7c2d8e 55%,#f97316)",
+       card:"rgba(255,255,255,.14)",cardB:"1px solid rgba(255,255,255,.32)",shadow:"0 14px 40px rgba(20,5,50,.35)",backdrop:"blur(10px)",
+       tile:"rgba(20,10,50,.55)",tileB:"1px solid rgba(255,255,255,.25)",litP:"rgba(14,60,110,.75)",litA:"rgba(110,20,60,.75)",aip:"linear-gradient(160deg,rgba(25,10,60,.7),rgba(70,20,90,.7))",
+       glow:"0 0 0 3px #4ade80,0 0 40px rgba(74,222,128,.5)",hintC:"#e6d3fb",kc:"background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.35);color:#fff",ribbon:"#16a34a",radius:"24px"}}
+];
+
+function themeCss(t){
+  const s=".stage.t"+t.id, c=t.css;
+  return `${s}{background:${c.bg};font-family:${t.font};color:${t.K.ink}}
+${s} .card{background:${c.card};border:${c.cardB};box-shadow:${c.shadow};border-radius:${c.radius};${c.backdrop?"backdrop-filter:"+c.backdrop+";":""}}
+${s} .card.p{border-top:6px solid ${t.K.p}} ${s} .card.ai{border-top:6px solid ${t.K.a}}
+${s} .card.win-p,${s} .card.win-a{box-shadow:${c.glow}}
+${s} .tile{background:${c.tile};border:${c.tileB}}
+${s} .tile.lit.p{border:3px solid ${t.K.p};background:${c.litP}} ${s} .tile.lit.ai{border:3px solid ${t.K.a};background:${c.litA}}
+${s} .aip{background:${c.aip}} ${s} .hint{color:${c.hintC}} ${s} .kc{${c.kc}} ${s} .ribbon{background:${c.ribbon}}
+${s} .cam{border-radius:${c.radius==="18px"?"12px":"16px"}}`;
+}
+
+/* the screen shown in every look: you win a round */
+function reveal(){
+  return arena({cam:camInner(408,382),lit:"PAPER",aiPanel:aiHang("ROCK"),aiLit:"ROCK",win:"p",status:["Final: PAPER",K.greenD,K.greenT],
+    center:centerCol({round:9,you:4,ai:4,pips:PIPS9.concat(["W"]),cur:9,streak:1,best:2,mid:midReveal("p","PAPER","ROCK","PAPER beats ROCK","+1 point for you")}),
+    hintItems:[["SPACE","Next round"],["P","New player"],["H","Learn mode"],["Q","Quit"]]});
+}
+
+const store = {
+  get(){ try{ return JSON.parse(localStorage.getItem("rps-style-options")||"{}"); }catch(e){ return {}; } },
+  set(v){ try{ localStorage.setItem("rps-style-options", JSON.stringify(v)); }catch(e){} }
+};
+let saved = store.get();
+const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function build(){
+  let css="", html="";
+  THEMES.forEach(t=>{
+    Object.assign(K, BASE, t.K);
+    css += themeCss(t)+"\n";
+    const sw = [t.K.p,t.K.a,t.css.card.startsWith("rgba")?"#7c2d8e":t.css.card,t.K.ink,t.K.green].map(c=>`<i style="background:${c}"></i>`).join("");
+    html += `<section class="opt" id="o${t.id}">
+      <div class="ohead"><span class="letter">${t.id.toUpperCase()}</span><h2>${esc(t.name)}</h2></div>
+      <p class="tag">${esc(t.tag)}</p>
+      <div class="body">
+        <div class="stage-wrap"><div class="stage t${t.id}">${reveal()}</div></div>
+        <div class="side">
+          <div class="lbl">Main colours</div><div class="sw">${sw}</div>
+          <div class="dec">${[["fav","My pick"],["maybe","Maybe"],["no","No"]].map(([v,l])=>`<button data-v="${v}" data-id="${t.id}">${l}</button>`).join("")}</div>
+          <textarea data-id="${t.id}" placeholder="What would you change? (accent colour, corners, text size...)"></textarea>
+        </div>
+      </div></section>`;
+  });
+  html += `<div style="display:flex;gap:10px;align-items:center"><button class="btn primary" id="copyAll">Copy my choice</button><span style="color:var(--muted)">Or just tell me the letter in the chat.</span></div>`;
+  const st=document.createElement("style"); st.textContent=css; document.head.appendChild(st);
+  document.getElementById("wrap").innerHTML = html;
+  THEMES.forEach(t=>{
+    const d=saved[t.id]||{}, sec=document.getElementById("o"+t.id);
+    sec.querySelector("textarea").value=d.note||"";
+    sec.querySelectorAll(".dec button").forEach(b=>b.classList.toggle("on",b.dataset.v===d.v));
+  });
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest(".dec button"); if(!b) return;
+  const d=saved[b.dataset.id]=saved[b.dataset.id]||{}; d.v = d.v===b.dataset.v ? "" : b.dataset.v;
+  b.parentElement.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.v===d.v)); store.set(saved);
+});
+document.addEventListener("input",e=>{
+  const t=e.target.closest("textarea[data-id]"); if(!t) return;
+  const d=saved[t.dataset.id]=saved[t.dataset.id]||{}; d.note=t.value; store.set(saved);
+});
+function text(){
+  const L={fav:"MY PICK",maybe:"MAYBE",no:"NO"}, lines=["My notes on the style options",""]; let any=false;
+  THEMES.forEach(t=>{ const d=saved[t.id]||{}, n=(d.note||"").trim(); if(!d.v&&!n) return; any=true;
+    lines.push(`${t.id.toUpperCase()} · ${t.name}${d.v?" — "+L[d.v]:""}`); if(n) lines.push("  "+n.replace(/\n/g,"\n  ")); lines.push(""); });
+  if(!any) lines.push("(No choices yet.)"); return lines.join("\n");
+}
+document.addEventListener("click",e=>{
+  if(e.target.id==="copyAll"){ document.getElementById("out").value=text(); document.getElementById("copied").textContent=""; document.getElementById("dlg").showModal(); }
+  if(e.target.id==="close") document.getElementById("dlg").close();
+  if(e.target.id==="copy"){ const out=document.getElementById("out"), m=document.getElementById("copied");
+    (navigator.clipboard?navigator.clipboard.writeText(out.value):Promise.reject()).then(()=>m.textContent="Copied. Paste it into the chat.",()=>{ out.select(); m.textContent=document.execCommand&&document.execCommand("copy")?"Copied. Paste it into the chat.":"Press Ctrl+C to copy."; }); }
+});
+function fit(){ document.querySelectorAll(".stage-wrap").forEach(w=>{ w.firstElementChild.style.transform=`scale(${w.clientWidth/1280})`; }); }
+window.addEventListener("resize",fit);
+build();
+const solo=/^#solo-([a-e])$/.exec(location.hash);
+if(solo){ const t=THEMES.find(x=>x.id===solo[1]); Object.assign(K,BASE,t.K);
+  document.body.innerHTML=`<div style="position:relative;width:1280px;height:720px"><div class="stage-wrap" style="width:1280px;height:720px;border:0;border-radius:0;box-shadow:none"><div class="stage t${t.id}">${reveal()}</div></div></div>`; }
+fit();
+</script>
+</body>
+</html>

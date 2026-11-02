@@ -112,16 +112,16 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;align-
 
 <header class="intro">
   <h1>Rock Paper Scissors AI: redesigned screens</h1>
-  <p>I redid the whole interface from scratch, including how you get into the game, and drew 19 screens at the game's real 1280 x 720 size. Below are the main decisions. Look at the screens, press Keep, Change or Drop on each, and write anything you like. Nothing here touches the real game until you say so.</p>
+  <p>I redid the whole interface from scratch and shortened how you get into the game, so a visitor needs three screens before the first round. The page has 15 screens at the game's real 1280 x 720 size. Below are the main decisions. Look at the screens, press Keep, Change or Drop on each, and write anything you like. Nothing here touches the real game until you say so.</p>
   <div class="notes-grid">
-    <div class="note"><b>1. Face-off layout</b><span>You on the left, the AI on the right, and the score, countdown and match progress in the middle. The countdown becomes huge, and the reveal happens in the middle where both eyes land.</span></div>
-    <div class="note"><b>2. Hands-free start</b><span>No typing to get in. Quick play (a guest, nothing saved), pick a player from a list, or a new player with an auto-generated nickname like "Swift Fox". Nicknames also keep real names off a public leaderboard.</span></div>
-    <div class="note"><b>3. Mode chosen up front</b><span>Challenge (the AI hides its thinking until the end) or Learn (see what it expects after every round) is a clear choice at the start, not a hidden key.</span></div>
-    <div class="note"><b>4. Scores belong to a match</b><span>A match is 15 rounds with a progress track of coloured dots. "Resume scores" and running totals are gone. Each profile only remembers what the AI learned about it.</span></div>
-    <div class="note"><b>5. A report card at the end</b><span>A title (Mastermind, Hard to read, Creature of habit, Open book), a gauge against the one-in-three chance mark, your throw mix and the habits it found.</span></div>
-    <div class="note"><b>6. Light, with dark where it helps</b><span>Light screens, but the move tiles and the AI's panel stay dark so the hand artwork stands out. The label "Markov AI" becomes "Adaptive AI", since it now blends four predictors.</span></div>
+    <div class="note"><b>1. Leaderboard first</b><span>The start screen shows who has beaten the AI most, then one big instruction. It is the reason to try, and it updates after every match.</span></div>
+    <div class="note"><b>2. Three steps to play</b><span>Start, type a name, check the camera. The match then starts by itself when a hand is held still. Nothing else stands in the way.</span></div>
+    <div class="note"><b>3. Face-off layout</b><span>You on the left, the AI on the right, and the score, countdown and match progress in the middle. The reveal happens where both eyes land.</span></div>
+    <div class="note"><b>4. Quick turnaround</b><span>A match is 15 rounds, about two minutes. After it, Play again keeps your name, and Next player returns to the leaderboard.</span></div>
+    <div class="note"><b>5. A report card at the end</b><span>A title, a gauge against the one-in-three chance mark, your throw mix and the habits it found.</span></div>
+    <div class="note"><b>6. Colours are being decided</b><span>The colours here are a placeholder. See <b>style-options.html</b> for the same screen in several looks, then tell me which one to apply here.</span></div>
   </div>
-</header>
+  </header>
 
 <div class="layout">
   <nav id="nav"></nav>
@@ -233,7 +233,7 @@ function arena(o){
   if(win==="p") h += A(300,10,160,28,"ribbon","WINNER");
   if(win==="a") h += A(1084,10,160,28,"ribbon","WINNER");
   h += center;
-  h += hint(hintItems||[["SPACE","Start round"],["P","Player"],["H","Learn mode"],["Q","Quit"]]);
+  h += hint(hintItems||[["SPACE","Start round"],["P","New player"],["H","Learn mode"],["Q","Quit"]]);
   return h;
 }
 
@@ -257,100 +257,51 @@ const midMissed = () => T(640,276,"MISSED IT",{s:34,b:1,c:K.amberD,al:"c"}) +
 
 const PIPS9 = ["W","L","D","L","W","W","L","D"];
 /* ============================ 1. getting started ============================ */
+const LB = [["ALEX","11 – 3"],["SAMI","10 – 4"],["JO","10 – 5"],["NIMA","9 – 4"],["KAVI","9 – 5"],["LUNA","8 – 5"],["RAVI","8 – 6"],["MIRA","7 – 6"]];
 function scrStart(){
-  let h = T(640,92,`ROCK PAPER SCISSORS <span style="color:${K.p}">AI</span>`,{s:56,b:1,c:K.ink,al:"c"});
-  h += T(640,140,"An AI that learns your habits. Can you stay unpredictable?",{s:20,c:K.muted,al:"c"});
-  [["ROCK",340,-5,0],["PAPER",640,0,.5],["SCISSORS",940,5,1]].forEach(([m,cx,rot,d])=>{
-    h += `<div class="a float" style="left:${cx-105}px;top:176px;width:210px;height:268px;animation-delay:${d}s"><div style="position:absolute;inset:0;border-radius:26px;overflow:hidden;background:${GRAD[m]};box-shadow:0 18px 38px rgba(30,20,70,.28);transform:rotate(${rot}deg)">${img(m,246,"position:absolute;left:50%;bottom:-8px;transform:translateX(-50%)")}</div></div>`;
+  let h = T(390,96,`ROCK PAPER SCISSORS <span style="color:${K.p}">AI</span>`,{s:44,b:1,c:K.ink,al:"c"});
+  h += T(390,142,"An AI that learns your habits. Can you beat it?",{s:19,c:K.muted,al:"c"});
+  [["ROCK",215,-5,0],["PAPER",390,0,.5],["SCISSORS",565,5,1]].forEach(([m,cx,rot,d])=>{
+    h += `<div class="a float" style="left:${cx-78}px;top:196px;width:156px;height:200px;animation-delay:${d}s"><div style="position:absolute;inset:0;border-radius:22px;overflow:hidden;background:${GRAD[m]};box-shadow:0 14px 30px rgba(30,20,70,.26);transform:rotate(${rot}deg)">${img(m,184,"position:absolute;left:50%;bottom:-6px;transform:translateX(-50%)")}</div></div>`;
   });
-  h += T(640,500,"SHOW YOUR HAND TO PLAY",{s:26,b:1,c:"#fff",al:"c",st:`background:${K.p};border-radius:40px;padding:14px 40px;box-shadow:0 10px 26px rgba(37,99,235,.38)`}).replace('class="a t"','class="a t pulse"');
-  h += T(640,546,`or press ${kc("SPACE")}`,{s:15,c:K.muted,al:"c"});
-  [["Show your hand"],["Throw on SHOOT!"],["See what the AI learned"]].forEach(([t],i)=>{ h += A(104+i*360,580,330,54,"step",`<i>${i+1}</i>${t}`); });
-  h += T(640,662,"Your hand is tracked live on this computer. No video is saved.",{s:14,c:K.faint,al:"c"});
-  h += T(640,694,CREDIT,{s:13,c:K.faint,al:"c"});
-  h += `<div class="a hint" style="left:880px;top:24px;width:370px;height:34px;justify-content:flex-end;font-size:14px"><span>${kc("L")} Leaderboard</span><span>${kc("G")} How to play</span></div>`;
-  return h;
-}
-
-function whoCard(x,sel,m,title,desc,tag,extra=""){
-  let h = A(x,166,340,430,"card","", sel?`border:3px solid ${K.p};box-shadow:0 16px 42px rgba(37,99,235,.24);transform:translateY(-8px)`:"");
-  h += A(x+100,196,140,150,"tile lit p",img(m,138));
-  h += T(x+170,380,title,{s:26,b:1,c:K.ink,al:"c"});
-  h += A(x+30,404,280,84,"",desc,"font-size:16px;line-height:22px;color:"+K.muted+";text-align:center;white-space:normal");
-  h += extra;
-  h += A(x+70,540,200,36,"chip",tag,sel?`background:${K.p};color:#fff;justify-content:center`:`background:#eef1f8;color:${K.muted};justify-content:center`);
-  return h;
-}
-function scrWho(){
-  return T(640,80,"Who's playing?",{s:42,b:1,c:K.ink,al:"c"}) + T(640,122,"Pick one. You can change this any time with P.",{s:18,c:K.muted,al:"c"}) +
-    whoCard(100,true,"PAPER","Quick play","Jump straight in as a guest. Nothing about you is saved.","RECOMMENDED") +
-    whoCard(470,false,"ROCK","Pick a player","Carry on as someone who played before. The AI remembers their habits.","CHOOSE FROM A LIST",
-      T(640,508,"KAVI · SAMI · NIMA · ALEX",{s:14,b:1,c:K.faint,al:"c"})) +
-    whoCard(840,false,"SCISSORS","New player","Get a nickname and keep your own best scores.","GET A NICKNAME") +
-    hint([["← →","Choose"],["ENTER","Select"],["SPACE","Quick play"]],664);
-}
-function scrPick(){
-  const rows=[["KAVI","12 matches","AI read you 41%"],["SAMI","9 matches","AI read you 29%"],["NIMA","7 matches","AI read you 27%"],["ALEX","5 matches","AI read you 18%"],["JO","4 matches","AI read you 36%"],["LUNA","3 matches","AI read you 38%"]];
-  let h = T(640,56,"Pick a player",{s:36,b:1,c:K.ink,al:"c"});
-  h += A(60,100,560,520,"card");
-  rows.forEach(([n,m,r],i)=>{ const y=124+i*80, sel=i===1;
-    h += A(80,y,520,70,"","",`border-radius:16px;background:${sel?K.pT:"#f6f8fc"};${sel?"border:2px solid "+K.p:""}`);
-    h += A(98,y+13,44,44,"","",`border-radius:50%;background:${sel?K.p:"#c9d3ea"};color:#fff;display:grid;place-items:center;font:700 20px 'Segoe UI',sans-serif`).replace("></div>",`>${n[0]}</div>`);
-    h += T(160,y+26,n,{s:22,b:1,c:K.ink})+T(160,y+52,`${m} · ${r}`,{s:14,c:K.muted});
+  h += T(390,462,`PRESS ${kc("SPACE")} TO PLAY`,{s:26,b:1,c:"#fff",al:"c",st:`background:${K.p};border-radius:40px;padding:14px 38px;box-shadow:0 10px 26px rgba(37,99,235,.38)`}).replace('class="a t"','class="a t pulse"');
+  h += T(390,512,"Beat the AI to climb the leaderboard",{s:15,c:K.muted,al:"c"});
+  [["Enter your name"],["Check the camera"],["Play 15 rounds"]].forEach(([t],i)=>{ h += A(60+i*218,552,210,54,"step",`<i>${i+1}</i>${t}`,"font-size:15px;padding:0 12px;gap:10px"); });
+  h += T(390,646,"Your hand is tracked live on this computer. No video is saved.",{s:13,c:K.faint,al:"c"});
+  h += T(390,676,CREDIT,{s:12,c:K.faint,al:"c"});
+  h += A(740,40,500,640,"card","","border-top:6px solid "+K.amber);
+  h += T(768,84,"LEADERBOARD",{s:26,b:1,c:K.ink}) + T(768,114,"Who beat the AI most · best score in a 15-round match",{s:14,c:K.muted});
+  LB.forEach(([n,v],i)=>{ const y=142+i*60, top=i===0;
+    h += A(760,y,460,52,"","",`border-radius:14px;background:${top?K.amberT:"#f6f8fc"};${top?"border:2px solid "+K.amber:""}`);
+    h += T(786,y+27,i+1,{s:20,b:1,c:i<3?"#c78a00":K.faint}) + T(836,y+27,n,{s:21,b:1,c:K.ink}) + T(1196,y+27,v,{s:21,b:1,c:top?K.amberD:K.ink2,al:"r"});
   });
-  h += A(650,100,570,520,"card p");
-  h += A(690,134,96,96,"","S",`border-radius:50%;background:${K.p};color:#fff;display:grid;place-items:center;font:700 44px 'Segoe UI',sans-serif`);
-  h += T(808,166,"SAMI",{s:36,b:1,c:K.ink})+T(808,204,"Last played yesterday",{s:15,c:K.muted});
-  [["9","matches"],["29%","AI read you"],["5","best streak"]].forEach(([v,l],i)=>{ h += A(690+i*166,258,150,86,"","",`border-radius:16px;background:#f6f8fc;border:1px solid #e1e6f2`).replace("></div>",`>${T(75,30,v,{s:30,b:1,c:K.p,al:"c"})}${T(75,62,l,{s:13,c:K.muted,al:"c"})}</div>`); });
-  h += T(690,378,"WHAT THE AI HAS NOTICED",{s:13,b:1,c:K.a,st:"letter-spacing:2px"});
-  h += A(690,396,500,110,"","After PAPER, SAMI often throws SCISSORS.<br>Tends to repeat a move after a loss.<br>Plays ROCK a little less than a third of the time.","font-size:17px;line-height:30px;color:"+K.ink2);
-  h += A(690,540,500,56,"btnx pri",`${kc("ENTER")} Play as SAMI`);
-  h += hint([["↑","Move up"],["↓","Move down"],["ENTER","Select"],["ESC","Back"]],650);
+  h += T(990,646,"Your name could be here",{s:14,b:1,c:K.faint,al:"c"});
   return h;
 }
-function scrNew(){
-  const chips=["Swift Fox","Calm Panda","Quick Otter","Brave Owl","Lucky Lynx","Clever Crab"];
-  let h = T(640,100,"Your nickname",{s:40,b:1,c:K.ink,al:"c"}) + T(640,146,"Shown on the leaderboard, so no real name is needed.",{s:18,c:K.muted,al:"c"});
-  h += A(290,200,700,120,"card","","border:3px solid "+K.p+";box-shadow:0 14px 40px rgba(37,99,235,.2)");
-  h += T(640,260,`Swift Fox<span style="color:${K.p}">|</span>`,{s:56,b:1,c:K.ink,al:"c"});
-  h += T(640,360,"OR PICK ONE",{s:13,b:1,c:K.faint,al:"c",st:"letter-spacing:3px"});
-  chips.forEach((c,i)=>{ const x=150+(i%3)*330, y=396+Math.floor(i/3)*64; h += A(x,y,300,50,"chip",`${kc(i+1)}&nbsp;&nbsp;${c}`,`background:#fff;border:1.5px solid ${i===0?K.p:"#cdd5e6"};color:${K.ink2};justify-content:center;font-size:19px;border-radius:14px;${i===0?"background:"+K.pT:""}`); });
-  h += A(440,548,400,56,"btnx pri",`${kc("ENTER")} Looks good`);
-  h += hint([["TAB","Shuffle"],["1-6","Pick a suggestion"],["ESC","Back"]],650);
+function scrName(){
+  let h = T(640,64,"STEP 1 OF 2",{s:13,b:1,c:K.faint,al:"c",st:"letter-spacing:3px"});
+  h += T(640,128,"What's your name?",{s:46,b:1,c:K.ink,al:"c"}) + T(640,180,"It goes on the leaderboard if you beat the AI.",{s:19,c:K.muted,al:"c"});
+  h += A(290,236,700,112,"card","","border:3px solid "+K.p+";box-shadow:0 14px 40px rgba(37,99,235,.2)");
+  h += T(640,292,`Mano<span style="color:${K.p}">|</span>`,{s:56,b:1,c:K.ink,al:"c"});
+  h += T(640,390,"Up to 12 letters. Leave it empty to play as Guest.",{s:15,c:K.faint,al:"c"});
+  h += A(440,436,400,58,"btnx pri",`${kc("ENTER")} Continue`);
+  h += hint([["ESC","Back"]],650);
   return h;
 }
-function scrWarm(){
-  let h = T(640,50,"Quick warm-up",{s:34,b:1,c:K.ink,al:"c"}) + T(640,90,"Show each gesture once. It starts by itself when all three are seen.",{s:17,c:K.muted,al:"c"});
-  h += A(40,122,680,440,"cam",camInner(680,440),"box-shadow:0 10px 30px rgba(20,33,61,.18)");
-  h += pillText(380,148,"HOLD YOUR HAND IN THE FRAME",K.ink,{s:14});
-  [["ROCK","SCISSORS",true],["PAPER","ROCK",true],["SCISSORS","PAPER",false]].forEach(([m,b,ok],i)=>{
-    const y=122+i*150;
-    h += A(750,y,490,136,"card","",ok?`border:2px solid ${K.green}`:"");
-    h += A(766,y+12,110,112,"tile "+(ok?"lit p":"none"),img(m,104,ok?"":"opacity:.4"));
-    h += T(900,y+38,m,{s:28,b:1,c:K.ink})+T(900,y+72,`beats <b>${b}</b>`,{s:16,c:K.muted});
-    h += T(900,y+104,ok?"✓ seen":"show it now…",{s:16,b:1,c:ok?K.greenD:K.amberD});
+function scrCheck(){
+  let h = T(640,40,"STEP 2 OF 2",{s:13,b:1,c:K.faint,al:"c",st:"letter-spacing:3px"});
+  h += T(640,84,"Check your camera",{s:36,b:1,c:K.ink,al:"c"}) + T(640,124,"Hold your hand up. The game starts by itself.",{s:17,c:K.muted,al:"c"});
+  h += A(60,156,640,440,"cam",camInner(640,440)+holdRing(640,440,.6)+pillText(320,402,"Hold still… 1 s",K.p,{s:15}),"box-shadow:0 10px 30px rgba(20,33,61,.18)");
+  h += A(730,156,490,440,"card","","border-top:6px solid "+K.p);
+  [["Camera connected",1],["Hand detected",1],["Hold still for 2 seconds",0]].forEach(([t,ok],i)=>{ const y=206+i*56;
+    h += A(760,y-18,36,36,"",ok?"✓":"",ok?`border-radius:50%;background:${K.green};color:#fff;display:grid;place-items:center;font:800 20px 'Segoe UI',sans-serif`:`border-radius:50%;border:4px solid #e3e8f4;border-top-color:${K.amber}`+";animation:spin 1.1s linear infinite");
+    h += T(814,y,t,{s:19,b:1,c:ok?K.ink:K.amberD});
   });
-  h += A(40,590,1200,8,"","","background:#e3e8f4;border-radius:4px")+A(40,590,800,8,"","",`background:${K.p};border-radius:4px`);
-  h += T(640,628,"2 of 3 done",{s:16,b:1,c:K.ink2,al:"c"});
-  h += hint([["SPACE","Skip"],["ESC","Back"]],660);
-  return h;
-}
-function scrMode(){
-  let h = T(640,76,"Choose your match",{s:40,b:1,c:K.ink,al:"c"}) + T(640,118,"15 rounds, about two minutes.",{s:18,c:K.muted,al:"c"});
-  const card=(x,sel,title,desc,tag,icon,gm,gl)=>{
-    let c = A(x,160,500,360,"card","", sel?`border:3px solid ${K.p};box-shadow:0 16px 42px rgba(37,99,235,.24);transform:translateY(-6px)`:"");
-    c += A(x+30,192,150,150,"","",`border-radius:22px;background:linear-gradient(160deg,#2b1347,#4c1b66);overflow:hidden`).replace("></div>",`>${icon}</div>`);
-    c += T(x+210,226,title,{s:32,b:1,c:K.ink});
-    c += A(x+210,254,260,110,"",desc,"font-size:17px;line-height:24px;color:"+K.muted+";white-space:normal");
-    c += A(x+30,392,200,36,"chip",tag,sel?`background:${K.p};color:#fff;justify-content:center`:`background:#eef1f8;color:${K.muted};justify-content:center`);
-    c += A(x+260,386,210,48,"","","display:flex;align-items:center;gap:10px;color:"+K.muted+";font-size:14px").replace("></div>",`><div style="width:40px;height:44px;border-radius:10px;background:#172554;position:relative;overflow:hidden">${img(gm,40,"position:absolute;left:50%;transform:translateX(-50%);top:2px")}</div>${gl}</div>`);
-    return c;
-  };
-  h += card(110,true,"Challenge","The AI hides what it is thinking. At the end you see what it learned about you.","DEFAULT",
-    T(75,75,"?",{s:96,b:1,c:"#d9b8f0",al:"c"}),"ROCK","or show ROCK");
-  h += card(670,false,"Learn","After every round you see what the AI expected, and why. Great for understanding how it works.","SEE ITS THINKING",
-    `<div style="position:absolute;left:24px;right:24px;bottom:26px;height:96px">${[0.39,0.49,0.12].map((v,i)=>`<div style="position:absolute;left:${i*40}px;bottom:0;width:30px;height:${v*180}px;border-radius:6px;background:${i===1?K.a:K.aL}"></div>`).join("")}</div>`,"PAPER","or show PAPER");
-  h += hint([["← →","Choose"],["ENTER","Start"]],560);
+  h += A(760,364,430,1,"","",`background:${K.line}`);
+  h += T(760,392,"HOW A ROUND WORKS",{s:12,b:1,c:K.faint,st:"letter-spacing:3px"});
+  MOVES.forEach((m,i)=>{ h += A(760+i*112,412,96,108,"tile lit p",img(m,98)); });
+  h += A(760,532,430,50,"","Throw on SHOOT! Rock beats scissors, scissors beat paper, paper beats rock.","font-size:14px;line-height:19px;color:"+K.muted+";white-space:normal");
+  h += hint([["SPACE","Start now"],["ESC","Back"]],650);
   return h;
 }
 
@@ -366,24 +317,24 @@ function scrCount(){
 function scrRevealWin(){
   return arena({cam:camInner(408,382),lit:"PAPER",aiPanel:aiHang("ROCK"),aiLit:"ROCK",win:"p",status:["Final: PAPER",K.greenD,K.greenT],
     center:centerCol({round:9,you:4,ai:4,pips:PIPS9.concat(["W"]),cur:9,streak:1,best:2,mid:midReveal("p","PAPER","ROCK","PAPER beats ROCK","+1 point for you")}),
-    hintItems:[["SPACE","Next round"],["P","Player"],["H","Learn mode"],["Q","Quit"]]});
+    hintItems:[["SPACE","Next round"],["P","New player"],["H","Learn mode"],["Q","Quit"]]});
 }
 function scrRevealLose(){
   return arena({cam:camInner(408,382),lit:"PAPER",aiPanel:aiHang("SCISSORS"),aiLit:"SCISSORS",win:"a",status:["Final: PAPER",K.greenD,K.greenT],
     center:centerCol({round:9,you:3,ai:5,pips:PIPS9.concat(["L"]),cur:9,streak:0,best:2,mid:midReveal("a","PAPER","SCISSORS","SCISSORS beats PAPER","+1 point for the AI")}),
-    hintItems:[["SPACE","Next round"],["P","Player"],["H","Learn mode"],["Q","Quit"]]});
+    hintItems:[["SPACE","Next round"],["P","New player"],["H","Learn mode"],["Q","Quit"]]});
 }
 function scrRevealLearn(){
   return arena({cam:camInner(408,382),lit:"PAPER",aiPanel:aiHang("SCISSORS"),win:"a",mode:"Learn mode",status:["Final: PAPER",K.greenD,K.greenT],
     learn:[{ROCK:.39,PAPER:.49,SCISSORS:.12},"PAPER","LOW","The AI expected PAPER (49%, an early guess) because you often throw paper after rock then rock. You threw it."],
     center:centerCol({round:9,you:3,ai:5,pips:PIPS9.concat(["L"]),cur:9,streak:0,best:2,mid:midReveal("a","PAPER","SCISSORS","SCISSORS beats PAPER","+1 point for the AI")}),
-    hintItems:[["SPACE","Next round"],["P","Player"],["H","Hide thinking"],["Q","Quit"]]});
+    hintItems:[["SPACE","Next round"],["P","New player"],["H","Hide thinking"],["Q","Quit"]]});
 }
 function scrMissed(){
   return arena({cam:camInner(408,382,{hand:false})+pillText(204,32,"Hold your hand up before SHOOT",K.amberD,{s:14}),aiPanel:aiIdle("NO ROUND","Nothing was counted"),
     status:["Looking for your hand",K.amberD,K.amberT],
     center:centerCol({round:9,you:3,ai:4,pips:PIPS9,cur:8,streak:0,best:2,mid:midMissed()}),
-    hintItems:[["SPACE","Go again"],["P","Player"],["Q","Quit"]]});
+    hintItems:[["SPACE","Go again"],["P","New player"],["Q","Quit"]]});
 }
 
 /* ============================ 3. after the match ============================ */
@@ -406,7 +357,7 @@ function scrSummary(){
   const flags=[1,1,0,0,0,1,1,1,1,1,0,1,1,0];
   let h = T(60,52,"MATCH COMPLETE",{s:13,b:1,c:K.faint,st:"letter-spacing:3px"}) + T(60,84,"MANO",{s:30,b:1,c:K.p});
   h += T(640,58,"AI WINS",{s:44,b:1,c:K.redD,al:"c"}) + T(640,100,"7 – 6 · 2 draws",{s:17,c:K.muted,al:"c"});
-  h += T(1220,64,"15 rounds",{s:15,b:1,c:K.muted,al:"r"});
+  h += T(1220,64,`<span style="color:${K.amberD}">#3</span> on the leaderboard`,{s:17,b:1,c:K.ink2,al:"r"});
   h += A(40,128,380,430,"card ai") + T(230,168,"YOUR TITLE",{s:12,b:1,c:K.faint,al:"c",st:"letter-spacing:3px"}) + T(230,212,"CREATURE OF HABIT",{s:27,b:1,c:K.a,al:"c"}) + T(230,246,"The AI read 57% of your throws.",{s:16,c:K.muted,al:"c"});
   tiers.forEach(([t,r],i)=>{ const y=280+i*40, on=i===cur;
     h += A(66,y,328,34,"","",`border-radius:10px;background:${on?K.aT:"#f6f8fc"};${on?"border:2px solid "+K.a:""}`).replace("></div>",`>${T(14,17,t,{s:14,b:1,c:on?K.aD:K.muted})}${T(314,17,r,{s:13,c:on?K.aD:K.faint,al:"r"})}</div>`); });
@@ -420,7 +371,7 @@ function scrSummary(){
   h += A(884,190,332,120,"","After PAPER you threw SCISSORS 5 of 7 times.<br>You threw ROCK 8 of 15 times.","font-size:17px;line-height:30px;color:"+K.pD+";white-space:normal");
   h += T(1050,340,"HOW THE AI DID, ROUND BY ROUND",{s:12,b:1,c:K.faint,al:"c",st:"letter-spacing:2px"});
   h += A(892,372,316,110,"",chart(316,110,flags)) + T(1050,510,"dashed line = chance (33%)",{s:12,c:K.faint,al:"c"});
-  h += A(240,580,200,56,"btnx pri",`${kc("SPACE")} Play again`) + A(456,580,230,56,"btnx",`${kc("R")} Every round`) + A(702,580,200,56,"btnx",`${kc("L")} Leaderboard`) + A(918,580,120,56,"btnx",`${kc("Q")} Done`);
+  h += A(284,580,220,56,"btnx pri",`${kc("SPACE")} Play again`) + A(520,580,230,56,"btnx",`${kc("R")} Every round`) + A(766,580,230,56,"btnx",`${kc("N")} Next player`);
   h += T(640,672,CREDIT,{s:13,c:K.faint,al:"c"});
   return h;
 }
@@ -442,20 +393,6 @@ function scrReplay(){
   });
   h += hint([["SPACE","Back to your report"],["→","Next page"]],648);
   return h;
-}
-function scrBoard(){
-  const hard=[["ALEX","18%"],["SAMI","24%"],["NIMA","27%"],["MANO","29%"],["KAVI","31%"],["RAVI","33%"],["JO","36%"],["LUNA","38%"]];
-  const wins=[["SAMI","11 wins"],["JO","10 wins"],["MANO","9 wins"],["ALEX","9 wins"],["ZED","8 wins"],["NIMA","8 wins"],["MIRA","7 wins"],["TOBY","7 wins"]];
-  const list=(arr,x,title,sub,col)=>{
-    let h=A(x,120,560,500,"card"+(col===K.p?" p":" ai"))+T(x+28,160,title,{s:24,b:1,c:col})+T(x+28,190,sub,{s:14,c:K.muted});
-    arr.forEach(([n,v],i)=>{ const me=n==="MANO", y=216+i*49;
-      h+=A(x+20,y,520,43,"","",`border-radius:12px;background:${me?K.pT:"#f6f8fc"};${me?"border:2px solid "+K.p:""}`);
-      h+=T(x+42,y+22,i+1,{s:18,b:1,c:i<3?"#c78a00":K.faint})+T(x+88,y+22,n+(me?"  (you)":""),{s:20,b:1,c:K.ink})+T(x+520,y+22,v,{s:20,b:1,c:me?K.p:K.ink2,al:"r"}); });
-    return h;
-  };
-  return T(640,60,"Leaderboard",{s:42,b:1,c:K.ink,al:"c"}) + T(640,98,"Today's players · nicknames only",{s:17,c:K.muted,al:"c"}) +
-    list(hard,40,"Hardest to read","The lower the number, the less the AI could predict you",K.p) + list(wins,680,"Most wins","Wins over the AI in a 15 round match",K.a) +
-    hint([["ESC","Back"]],650);
 }
 /* ============================ 4. housekeeping ============================ */
 function scrCamera(){
@@ -509,24 +446,15 @@ function scrStyle(){
 
 /* ============================ the list of screens ============================ */
 const SCREENS = [
- {g:"start",title:"Start screen",when:"Shown when nobody is playing, and after a match ends.",render:scrStart,
-  why:"People walk up with no instructions, so this says what to do in one glance and starts when a hand appears. The three-step strip explains the game, and your credit sits at the bottom.",
-  marks:[[258,92,"Name of the game and the one-line pitch."],[200,330,"Three cards from your artwork float to draw the eye."],[383,500,"The only instruction: show a hand."],[86,607,"How it works in three steps."],[380,694,"Your credit line."]]},
- {g:"start",title:"Who's playing?",when:"After the start screen, if SPACE is pressed instead of showing a hand.",render:scrWho,
-  why:"Replaces the typed name box. Quick play is the default so a visitor is one key from playing. Returning players choose from a list, new ones get a nickname.",
-  marks:[[100,330,"Quick play: a guest, nothing saved."],[470,330,"Pick a player from the people who played before."],[840,330,"New player: gets a nickname."]]},
- {g:"start",title:"Pick a player",when:"After choosing 'Pick a player'.",render:scrPick,
-  why:"Replaces 'welcome back'. You see each person's stats and what the AI has noticed about them before you choose, so there's no typing and no resume-or-new question.",
-  marks:[[70,160,"Saved players, most recent first."],[660,160,"A preview of the selected player."],[672,432,"What the AI has noticed about them."]]},
- {g:"start",title:"New player",when:"After choosing 'New player'.",render:scrNew,
-  why:"A nickname is suggested automatically, so a visitor presses ENTER and goes. Nicknames mean real names never appear on the leaderboard.",
-  marks:[[270,260,"The suggested nickname, editable."],[130,421,"Six more suggestions on keys 1 to 6."]]},
- {g:"start",title:"Quick warm-up",when:"Before a new player's first match. Returning players skip it.",render:scrWarm,
-  why:"Hand detection is where visitors get frustrated. This shows they're being seen, teaches the three gestures and what beats what, and starts by itself.",
-  marks:[[60,142,"Live camera."],[770,142,"The three gestures, what each beats, and whether the camera has seen it."],[60,609,"Starts automatically when all three are seen."]]},
- {g:"start",title:"Choose your match",when:"After the warm-up, or from the player list.",render:scrMode,
-  why:"Challenge and Learn become a real choice. Visitors who want to understand the AI pick Learn. Everyone else gets Challenge. You can choose with a gesture: show rock or paper.",
-  marks:[[130,200,"Challenge: the AI's thinking is hidden until the end."],[690,200,"Learn: see what it expected after every round."],[540,430,"Optional gesture control."]]},
+ {g:"start",title:"Start screen with leaderboard",when:"Shown when nobody is playing, and after every match.",render:scrStart,
+  why:"The first thing a visitor sees is who has beaten the AI most, which is the reason to try. One big instruction, then three steps. The board updates after every match.",
+  marks:[[46,96,"Name of the game and the one-line pitch."],[130,214,"Your artwork floats to draw the eye."],[205,462,"The only instruction: press SPACE."],[52,552,"What happens next: name, camera, play."],[760,60,"Who beat the AI most, by best score in a 15-round match."],[1226,150,"The top player gets a gold row."]]},
+ {g:"start",title:"Enter your name",when:"After SPACE on the start screen. Step 1 of 2.",render:scrName,
+  why:"The only typing in the whole flow. A name goes on the leaderboard, and an empty name plays as Guest so nobody is stuck.",
+  marks:[[270,292,"Type a name, up to 12 letters."],[430,390,"Empty means Guest, which is not saved."],[432,465,"ENTER moves on."]]},
+ {g:"start",title:"Check your camera",when:"After the name. Step 2 of 2, then straight into the match.",render:scrCheck,
+  why:"Combines the camera test and the instructions into one waiting moment. The match starts by itself once a hand has been held still for two seconds, so there is no extra button.",
+  marks:[[80,176,"Live camera with the hand skeleton."],[748,206,"Each check turns green as it passes."],[748,412,"The rules, while the visitor waits."]]},
  {g:"match",title:"Ready",when:"Before each round.",render:scrReady,
   why:"The new main layout. Your camera on the left, the AI on the right, and everything about the match in the middle. A ring around your hand fills as you hold still, so you can start without touching the keyboard.",
   marks:[[28,24,"Your name and whether the camera sees your hand."],[60,200,"Hold still and the ring fills to start the round."],[500,40,"Round, score and the match track in the middle."],[1050,56,"The AI's side: its name and the match mode."],[36,550,"Your three moves. The detected one lights up."]]},
@@ -545,15 +473,12 @@ const SCREENS = [
  {g:"match",title:"Missed round",when:"When no hand was seen at the end of the countdown.",render:scrMissed,
   why:"Replaces a vague 'no detection'. It says plainly that the round doesn't count, and how to avoid it next time.",
   marks:[[535,276,"A friendly 'missed it', not an error."],[500,466,"Says what happened and what to do."]]},
- {g:"after",title:"Your report",when:"After the last round. Replaces the old summary.",render:scrSummary,
+ {g:"after",title:"Your report",when:"After the last round. Replaces the old summary. Next player goes back to the start screen.",render:scrSummary,
   why:"A report card people remember. A title, a gauge against the one-in-three chance mark, your throw mix, the habits it found, and a chart of how the AI did. Play again is the main button.",
-  marks:[[160,168,"A title earned by how readable you were."],[470,196,"The gauge: green is hard to read, red is an open book."],[450,446,"Your throw mix, so a favourite move shows."],[884,168,"Habits it found, in plain words."],[226,608,"Play again is the main button."]]},
+  marks:[[160,168,"A title earned by how readable you were."],[470,196,"The gauge: green is hard to read, red is an open book."],[450,446,"Your throw mix, so a favourite move shows."],[884,168,"Habits it found, in plain words."],[270,608,"Play again keeps your name and goes straight to the next match. Next player returns to the start screen."],[1030,64,"Where you landed on the leaderboard."]]},
  {g:"after",title:"Every round",when:"From the report, with R.",render:scrReplay,
   why:"All the AI's reasoning, kept until the match is over. You see where it guessed right and where you fooled it. This replaces showing it round by round in Challenge mode.",
   marks:[[44,172,"Your throw, the AI's throw and the result."],[350,134,"What it expected, now revealed."],[600,134,"A tick if it guessed, a cross if you fooled it."]]},
- {g:"after",title:"Leaderboard",when:"From the start screen or the report, with L.",render:scrBoard,
-  why:"'Hardest to read' is the one that fits this project: the lowest AI accuracy wins, which rewards being unpredictable. 'Most wins' is there for anyone who simply wants to beat the AI.",
-  marks:[[48,160,"The main board: the lower, the harder to read."],[688,160,"Wins over the AI."],[48,385,"Your row is highlighted."]]},
  {g:"house",title:"Camera problem",when:"If the camera is unplugged or used by another app.",render:scrCamera,
   why:"Today the game would freeze or quit. This tells whoever is running it what to do, and reconnects by itself.",
   marks:[[360,318,"What happened."],[380,408,"Three things to try."],[540,525,"It keeps retrying by itself."]]},
@@ -561,14 +486,14 @@ const SCREENS = [
   why:"Change match length, default mode and privacy without editing files. Visitors never see it.",
   marks:[[760,150,"Match length."],[760,242,"Default mode."],[760,334,"Camera: full, or skeleton only to hide faces."],[760,426,"Return to the start screen after a quiet spell."],[760,518,"Leaderboard."]]},
  {g:"house",title:"Still there?",when:"After a quiet spell in the middle of a match.",render:scrIdle,
-  why:"If a visitor walks away, the match ends by itself and the next person gets a fresh start screen. Guest data is wiped.",
+  why:"If a visitor walks away, the match ends by itself and the next person gets the start screen with the leaderboard.",
   marks:[[525,250,"A friendly prompt."],[720,370,"A short countdown before the match ends."]]},
  {g:"system",title:"Design system",when:"Reference for every screen.",render:scrStyle,
   why:"The whole look in one place: two colours with fixed meanings (blue is you, rose is the AI), one font, and a small set of components.",
   marks:[[44,150,"Colours."],[44,430,"Type sizes."],[704,150,"Buttons, chips, tiles and the match track."]]}
 ];
 const GROUPS = {
-  start:{h:"1. Getting started",p:"From walking up to the screen to the first round."},
+  start:{h:"1. Getting started",p:"Three screens, then straight into the match: leaderboard, name, camera."},
   match:{h:"2. During a match",p:"The face-off screen and each moment of a round."},
   after:{h:"3. After the match",p:"What you take away."},
   house:{h:"4. Housekeeping",p:"Problems, settings and walking away."},
