@@ -124,11 +124,15 @@ def test_nothing_is_saved_before_a_player_is_chosen(session, store):
     assert store.load_all() == {}
 
 
-def test_holding_a_hand_still_starts_the_first_round(session):
+def test_holding_a_hand_still_passes_the_check_but_waits_for_space(session):
     begin(session, "Ana")
     session.update(10.0, "PAPER")
-    assert session.state == STATE_CAMERA_CHECK and session.hold_progress(10.5) == pytest.approx(0.25)
+    assert session.hold_progress(10.5) == pytest.approx(0.25)
     session.update(10.0 + config.HOLD_TO_START_SECONDS, "PAPER")
+    assert session.check_passed and session.state == STATE_CAMERA_CHECK    # the player starts the match
+    session.update(30.0, None)
+    assert session.check_passed and session.hold_progress(30.0) == 1.0
+    session.handle_key(KEY_SPACE, 30.0)
     assert session.state == STATE_COUNTDOWN
 
 
@@ -467,3 +471,24 @@ def test_the_explanation_is_still_kept_while_learn_mode_is_off(session):
     play_round(session, "ROCK")
     play_round(session, "ROCK")
     assert session.explanation.startswith("The AI expected")
+
+
+def test_on_the_ready_screen_a_held_hand_does_not_start_the_round(session):
+    begin(session, "Ana")
+    session.handle_key(KEY_SPACE, 0)
+    session.update(3.0, "ROCK")
+    session.handle_key(KEY_SPACE, 3.0)
+    session.state = STATE_IDLE
+    for second in range(10):
+        session.update(10.0 + second, "PAPER")
+    assert session.state == STATE_IDLE
+
+
+def test_going_back_to_the_name_resets_the_camera_check(session):
+    begin(session, "Ana")
+    session.update(1.0, "PAPER")
+    session.update(1.0 + config.HOLD_TO_START_SECONDS, "PAPER")
+    assert session.check_passed
+    session.handle_key(KEY_ESC, 5.0)
+    session.handle_key(KEY_ENTER, 5.0)
+    assert session.state == STATE_CAMERA_CHECK and not session.check_passed

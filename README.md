@@ -88,7 +88,7 @@ An interactive, real-time Computer Vision game that lets you play **Rock-Paper-S
 
 1. **Start screen:** the leaderboard shows who beat the AI most. Press `SPACE`.
 2. **Your name:** type a name (up to 12 letters) and press `ENTER`. Leave it empty to play as a guest, who is never saved.
-3. **Camera check:** hold your hand up. The match starts by itself after two seconds.
+3. **Camera check:** hold your hand up for two seconds until everything is ticked, then press `SPACE` to start the match.
 4. **The match:** 15 rounds. Show rock, paper or scissors on SHOOT! The AI has already locked its move.
 5. **Report card:** a title, how readable you were, the habits it found, and your leaderboard rank.
 

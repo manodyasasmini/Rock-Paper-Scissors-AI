@@ -45,7 +45,7 @@ MATCH_ROUNDS = 15
 # which habit to break. The summary after a match always shows what the AI learned. `H` toggles it.
 LEARN_MODE_DEFAULT = False
 
-# Start of a match: hold a hand still this long (seconds) and the round begins by itself
+# Camera check: hold a hand still this long (seconds) and the check passes; the player then presses SPACE
 HOLD_TO_START_SECONDS = 2.0
 
 # Walking away: after this long without a hand or key, ask "Still there?", then return to the start screen

@@ -288,18 +288,20 @@ def _check_screen(session, L, now, live_gesture, view):
     c = _begin(L, "check", _build_check)
     c.spaced(640, 40, "STEP 2 OF 2", 13, theme.FAINT)
     c.text(640, 84, "Check your camera", 36, theme.INK, True, "mm")
-    c.text(640, 124, "Hold your hand up. The game starts by itself.", 17, theme.MUTED, False, "mm")
+    c.text(640, 124, "Hold your hand up until everything is ticked.", 17, theme.MUTED, False, "mm")
     _camera(c, view, CHECK_CAM, "Waiting for the camera")
     x, y, w, h = CHECK_CAM
     progress = session.hold_progress(now)
     _hold_ring(c, x, y, w, h, progress)
     hand = view is not None and view.hand_found
-    if progress > 0:
+    if session.check_passed:
+        _pill(c, x + w / 2, y + h - 38, "All set!", theme.GREEN_D)
+    elif progress > 0:
         left = max(0.0, config.HOLD_TO_START_SECONDS * (1 - progress))
         _pill(c, x + w / 2, y + h - 38, f"Hold still… {left:.1f} s", theme.PLAYER)
     else:
         _pill(c, x + w / 2, y + h - 38, "Hold your hand up" if not hand else "Hold your hand still", theme.AMBER_D)
-    steps = [("Camera connected", True), ("Hand detected", hand or progress > 0), ("Hold still for 2 seconds", False)]
+    steps = [("Camera connected", True), ("Hand detected", hand or progress > 0), ("Hold still for 2 seconds", session.check_passed)]
     for i, (label, ok) in enumerate(steps):
         cy = 206 + i * 56
         if ok:
@@ -308,11 +310,19 @@ def _check_screen(session, L, now, live_gesture, view):
             _spinner(c, 778, cy, now)
         c.text(814, cy, label, 19, theme.INK if ok else theme.AMBER_D, True)
     c.rect(760, 364, 430, 1, fill=theme.CARD_LINE)
-    c.spaced(760, 392, "HOW A ROUND WORKS", 12, theme.FAINT, spacing=3, anchor="l")
+    if session.check_passed:
+        c.rect(760, 384, 430, 62, fill=theme.PLAYER, radius=16)
+        width = max(26, c.tw("SPACE", 13, True) + 16) + 10 + c.tw("Start the match", 20, True)
+        edge = _keycap(c, 975 - width / 2, 415, "SPACE")
+        c.text(edge + 10, 415, "Start the match", 20, theme.WHITE, True)
+        top, size = 462, 70
+    else:
+        c.spaced(760, 392, "HOW A ROUND WORKS", 12, theme.FAINT, spacing=3, anchor="l")
+        top, size = 412, 96
     for i, move in enumerate(CHOICES):
-        _tile(c, 760 + i * 112, 412, 96, 108, move, "p", True)
+        _tile(c, 760 + i * 112, top, 96, size, move, "p", True)
     c.wrapped(760, 541, "Throw on SHOOT! Rock beats scissors, scissors beat paper, paper beats rock.", 14, theme.MUTED, 430, 19)
-    _hints(c, [("SPACE", "Start now"), ("ESC", "Back")], 678)
+    _hints(c, [("SPACE", "Start the match" if session.check_passed else "Skip the wait"), ("ESC", "Back")], 678)
     return c
 
 
@@ -401,12 +411,7 @@ def _match(session, L, now, live_gesture, view):
 
     cx, cy, cw, ch = MATCH_CAM
     _camera(c, view, MATCH_CAM)
-    if state == STATE_IDLE:
-        progress = session.hold_progress(now)
-        _hold_ring(c, cx, cy, cw, ch, progress)
-        if progress > 0:
-            _pill(c, cx + cw / 2, cy + ch - 32, f"Hold still… {config.HOLD_TO_START_SECONDS * (1 - progress):.1f} s", theme.PLAYER, 14)
-    elif state == STATE_COUNTDOWN:
+    if state == STATE_COUNTDOWN:
         _pill(c, cx + cw / 2, cy + 32, "Show your gesture on SHOOT!", theme.INK, 14)
     elif revealed and not valid:
         _pill(c, cx + cw / 2, cy + 32, "Hold your hand up before SHOOT", theme.AMBER_D, 14)
@@ -520,7 +525,6 @@ def _middle(c, session, now, valid):
         group = c.tw("Press", 15) + 6 + max(26, c.tw("SPACE", 13, True) + 16)
         c.text(640 - group / 2, t + 360, "Press", 15, theme.MUTED)
         _keycap(c, 640 - group / 2 + c.tw("Press", 15) + 6, t + 360, "SPACE")
-        c.text(640, t + 386, f"or hold your hand still for {config.HOLD_TO_START_SECONDS:g} s", 13, theme.FAINT, False, "mm")
 
     flags = [{"PLAYER": "W", "AI": "L", "TIE": "D"}[r.result] for r in session.match_log]
     if not session.match_rounds:

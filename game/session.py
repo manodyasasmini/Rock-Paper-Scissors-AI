@@ -21,7 +21,6 @@ STATE_REPLAY = "REPLAY"                  # Every round of the match, with what t
 
 # States where a visitor may have walked away
 QUIET_STATES = (STATE_NAME_INPUT, STATE_CAMERA_CHECK, STATE_IDLE, STATE_SHOW_RESULT, STATE_SUMMARY, STATE_REPLAY)
-HOLD_STATES = (STATE_CAMERA_CHECK, STATE_IDLE)
 
 ACTION_QUIT = "quit"
 ACTION_TOGGLE_FULLSCREEN = "fullscreen"
@@ -59,6 +58,7 @@ class GameSession:
         self.input_text = ""
         self.last_activity = 0.0
         self.hold_since = None
+        self.check_passed = False   # the camera check is done; the player starts the match with SPACE
         self.admin_open = False
         self.admin_clear_armed = False
         self.leaderboard_rows = []
@@ -93,7 +93,9 @@ class GameSession:
         return min(shown, self.match_rounds) if self.match_rounds else shown
 
     def hold_progress(self, now):
-        """0 to 1: how long the player's hand has been held still toward starting."""
+        """0 to 1: how long the player's hand has been held still on the camera check."""
+        if self.check_passed:
+            return 1.0
         if self.hold_since is None:
             return 0.0
         return max(0.0, min(1.0, (now - self.hold_since) / config.HOLD_TO_START_SECONDS))
@@ -182,13 +184,13 @@ class GameSession:
 
         if live_gesture and self.state in QUIET_STATES:
             self.last_activity = now
-        if self.state in HOLD_STATES and not self.admin_open:
+        if self.state == STATE_CAMERA_CHECK and not self.check_passed and not self.admin_open:
             if live_gesture is None:
                 self.hold_since = None
             elif self.hold_since is None:
                 self.hold_since = now
             elif now - self.hold_since >= config.HOLD_TO_START_SECONDS:
-                self.start_round(now)
+                self.check_passed = True
         if self.state in QUIET_STATES and self.idle_remaining(now) == 0.0:
             self.admin_open = False
             self.go_to_start()
@@ -269,6 +271,7 @@ class GameSession:
             elif key == KEY_ESC:
                 self.state = STATE_NAME_INPUT
                 self.hold_since = None
+                self.check_passed = False
         elif self.state == STATE_SUMMARY:
             if key == KEY_SPACE:
                 self.start_new_match(now)
@@ -295,6 +298,7 @@ class GameSession:
         if key == KEY_ENTER:
             self.switch_to_player(self.input_text)
             self.hold_since = None
+            self.check_passed = False
             self.state = STATE_CAMERA_CHECK
         elif key == KEY_ESC:
             self.state = STATE_START
