@@ -16,3 +16,8 @@ ENV/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local player data (personal, changes every game)
+players_data.json
+players_data.json.tmp
+players_data.json.corrupt-*

@@ -6,7 +6,8 @@ import random
 import math
 import json
 import os
-from collections import defaultdict, deque
+import sys
+from collections import Counter, defaultdict, deque
 from PIL import Image, ImageDraw, ImageFont
 
 # ==========================================================
@@ -27,6 +28,10 @@ hands = mp_hands.Hands(
 cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+
+if not cap.isOpened():
+    print("ERROR: Could not open the camera. Check that it is connected and not used by another app.")
+    sys.exit(1)
 
 WINDOW_NAME = "Rock Paper Scissors AI - Arena"
 cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
@@ -79,8 +84,14 @@ transitions = defaultdict(lambda: {"ROCK": 1, "PAPER": 1, "SCISSORS": 1})
 last_player_move = None
 
 # Landmark indices
+WRIST = 0
 FINGER_TIPS = [8, 12, 16, 20]
 FINGER_PIPS = [6, 10, 14, 18]
+
+# Gesture smoothing: the move is the most common gesture over the last few frames
+GESTURE_WINDOW = 10
+GESTURE_MIN_VOTES = 6
+gesture_buffer = deque(maxlen=GESTURE_WINDOW)
 
 # Load Crisp TrueType Fonts
 def get_font(size, bold=False):
@@ -113,13 +124,20 @@ FONT_MODAL_TITLE = get_font(28, bold=True)
 # 2. PERSISTENT PLAYER DATA & AI MEMORY STORAGE
 # ==========================================================
 def load_all_players():
-    if os.path.exists(DATA_FILE):
+    if not os.path.exists(DATA_FILE):
+        return {}
+    try:
+        with open(DATA_FILE, "r") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        # Keep the unreadable file so a later save can't silently destroy it
+        backup = f"{DATA_FILE}.corrupt-{time.strftime('%Y%m%d-%H%M%S')}"
         try:
-            with open(DATA_FILE, "r") as f:
-                return json.load(f)
-        except Exception:
-            return {}
-    return {}
+            os.replace(DATA_FILE, backup)
+            print(f"WARNING: {DATA_FILE} was unreadable; moved to {backup}")
+        except OSError:
+            pass
+        return {}
 
 def save_current_player():
     global player_name, transitions, score_player, score_ai, score_ties, best_streak
@@ -139,8 +157,11 @@ def save_current_player():
         "transitions": serialized_transitions,
         "last_played": time.strftime("%Y-%m-%d %H:%M:%S")
     }
-    with open(DATA_FILE, "w") as f:
+    # Write to a temp file then swap it in, so a crash mid-write can't corrupt the data
+    tmp_file = DATA_FILE + ".tmp"
+    with open(tmp_file, "w") as f:
         json.dump(data, f, indent=4)
+    os.replace(tmp_file, DATA_FILE)
 
 def switch_to_player(name, resume_scores=False):
     global player_name, score_player, score_ai, score_ties, streak, best_streak, transitions, match_history, last_player_move
@@ -180,10 +201,16 @@ def switch_to_player(name, resume_scores=False):
 # ==========================================================
 def detect_gesture(hand_landmarks):
     landmarks = hand_landmarks.landmark
+    wrist = landmarks[WRIST]
+
+    def dist_to_wrist(idx):
+        return math.hypot(landmarks[idx].x - wrist.x, landmarks[idx].y - wrist.y)
+
+    # A finger is extended when its tip is farther from the wrist than its middle
+    # knuckle. Unlike comparing y-coordinates, this works at any hand rotation.
     fingers_extended = []
     for tip, pip in zip(FINGER_TIPS, FINGER_PIPS):
-        is_extended = landmarks[tip].y < landmarks[pip].y
-        fingers_extended.append(is_extended)
+        fingers_extended.append(dist_to_wrist(tip) > dist_to_wrist(pip) * 1.05)
 
     open_count = sum(fingers_extended)
 
@@ -195,6 +222,15 @@ def detect_gesture(hand_landmarks):
         return "SCISSORS"
     else:
         return None
+
+def smooth_gesture(raw_gesture):
+    """Record this frame's gesture and return the stable one (or None if unsure)."""
+    gesture_buffer.append(raw_gesture)
+    votes = Counter(g for g in gesture_buffer if g is not None)
+    if not votes:
+        return None
+    gesture, count = votes.most_common(1)[0]
+    return gesture if count >= GESTURE_MIN_VOTES else None
 
 def predict_ai_move():
     global last_player_move, ai_mode
@@ -240,19 +276,27 @@ def draw_cyber_hand(frame, hand_landmarks):
         cv2.circle(frame, pt, 5, (0, 255, 255), -1, cv2.LINE_AA)
         cv2.circle(frame, pt, 2, (255, 255, 255), -1, cv2.LINE_AA)
 
+_background_cache = {}
+
+def get_background(w, h):
+    if (w, h) not in _background_cache:
+        bg = Image.new("RGBA", (w, h), (12, 16, 26, 255))
+        bg_draw = ImageDraw.Draw(bg)
+        grid_color = (16, 22, 35, 255)  # grid lines pre-blended onto the background
+        for gx in range(0, w, 80):
+            bg_draw.line([(gx, 0), (gx, h)], fill=grid_color, width=1)
+        for gy in range(0, h, 80):
+            bg_draw.line([(0, gy), (w, gy)], fill=grid_color, width=1)
+        _background_cache[(w, h)] = bg
+    return _background_cache[(w, h)]
+
 def render_ui(frame, current_time, live_gesture):
     h, w, _ = frame.shape
 
-    # Solid Dark Arena Background across the entire screen
-    pil_frame = Image.new("RGBA", (w, h), (12, 16, 26, 255))
+    # Dark arena background with grid, rendered once per resolution and reused
+    pil_frame = get_background(w, h).copy()
     overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
-
-    # Ambient Studio Grid Lines
-    for gx in range(0, w, 80):
-        draw.line([(gx, 0), (gx, h)], fill=(20, 28, 44, 120), width=1)
-    for gy in range(0, h, 80):
-        draw.line([(0, gy), (w, gy)], fill=(20, 28, 44, 120), width=1)
 
     # -------------------------------------------------------------
     # STATE 1: NAME INPUT PROFILE SCREEN
@@ -640,10 +684,14 @@ while cap.isOpened():
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = hands.process(rgb_frame)
 
+        raw_gesture = None
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
                 draw_cyber_hand(frame, hand_landmarks)
-                live_gesture = detect_gesture(hand_landmarks)
+                raw_gesture = detect_gesture(hand_landmarks)
+        live_gesture = smooth_gesture(raw_gesture)
+    else:
+        gesture_buffer.clear()
 
     # --- STATE TRANSITIONS ---
     if game_state == STATE_COUNTDOWN:
@@ -682,7 +730,7 @@ while cap.isOpened():
     cv2.imshow(WINDOW_NAME, display_frame)
 
     # Key controls
-    key = cv2.waitKey(20) & 0xFF
+    key = cv2.waitKey(1) & 0xFF
 
     # 1. Text input handling during Player Profile Screen
     if game_state == STATE_NAME_INPUT:
