@@ -39,6 +39,12 @@ Screenshots from the running game, played by test players.
 | ![Learn mode](demo/learn-mode.png) | ![Report card](demo/report.png) | ![Every round](demo/every-round.png) |
 | *What the AI expected, and why (press `H`)* | *A title, how readable you were, the habits found* | *Every throw and what the AI expected* |
 
+**Skeleton-only view** (operator panel, key 3) replaces the camera picture with a plain grid and still draws your hand, so no face or room appears on screen:
+
+| You win | AI wins |
+| :---: | :---: |
+| ![Skeleton-only view, you win](demo/skeleton-only-you-win.png) | ![Skeleton-only view, AI wins](demo/skeleton-only-ai-wins.png) |
+
 ## The AI
 
 Four small predictors each guess your next move, and the one with the best recent record counts most:
@@ -96,7 +102,7 @@ Press the number to change a setting. Changes are saved straight away in `settin
 
 ## Privacy
 
-The webcam picture is used only to find your hand and to draw it on screen. No video or image is recorded or saved. Saved files hold only player names, leaderboard scores and the AI's statistics about each player. Guests are never saved. If the screen faces a public walkway, switch on "skeleton only".
+The webcam picture is used only to find your hand and to draw it on screen. No video or image is recorded or saved. Saved files hold only player names, leaderboard scores and the AI's statistics about each player. Guests are never saved. If the screen faces a public walkway, switch on "skeleton only" (see the pictures above).
 
 ## Install and run
 
