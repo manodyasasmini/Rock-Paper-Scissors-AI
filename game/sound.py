@@ -1,7 +1,9 @@
 """Short sounds, made in code so no audio files are needed. They play on Windows (winsound); elsewhere the game is silent."""
 import io
 import math
+import os
 import struct
+import tempfile
 import wave
 
 try:
@@ -44,17 +46,31 @@ def make_wav(notes, volume=0.45):
 
 
 class Sounds:
+    """Plays the sounds. Windows cannot play from memory without waiting, so each sound is saved once as a small
+    WAV file in a temporary folder and played from there without waiting."""
+
     def __init__(self, enabled=True):
         self.enabled = enabled
-        self._wavs = {}
+        self._folder = None
+        self._files = {}
+
+    def _path(self, name):
+        if name not in self._files:
+            if self._folder is None:
+                self._folder = tempfile.mkdtemp(prefix="rps-sounds-")
+            path = os.path.join(self._folder, f"{name}.wav")
+            with open(path, "wb") as f:
+                f.write(make_wav(SOUNDS[name]))
+            self._files[name] = path
+        return self._files[name]
 
     def play(self, name):
         """Start a sound without waiting for it. A new sound cuts off the one still playing."""
         if not self.enabled or winsound is None or name not in SOUNDS:
             return
-        if name not in self._wavs:
-            self._wavs[name] = make_wav(SOUNDS[name])
         try:
-            winsound.PlaySound(self._wavs[name], winsound.SND_MEMORY | winsound.SND_ASYNC)
-        except RuntimeError:
-            pass
+            winsound.PlaySound(self._path(name), winsound.SND_FILENAME | winsound.SND_ASYNC)
+        except (RuntimeError, OSError) as error:
+            if not getattr(self, "_warned", False):
+                print(f"WARNING: sound could not play: {error}")
+                self._warned = True

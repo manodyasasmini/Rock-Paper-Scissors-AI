@@ -18,19 +18,22 @@ def test_sounds_play_through_winsound_without_waiting(monkeypatch):
     calls = []
 
     class FakeWinsound:
-        SND_MEMORY, SND_ASYNC = 4, 1
-        PlaySound = staticmethod(lambda data, flags: calls.append((len(data), flags)))
+        SND_FILENAME, SND_ASYNC = 131072, 1
+        PlaySound = staticmethod(lambda data, flags: calls.append((data, flags)))
 
     monkeypatch.setattr(sound, "winsound", FakeWinsound)
     Sounds().play("win")
-    assert len(calls) == 1 and calls[0][1] == 5
+    path, flags = calls[0]
+    assert len(calls) == 1 and flags == 131073 and path.endswith("win.wav")
+    with wave.open(path) as wav:                      # the file really is a playable WAV
+        assert wav.getnframes() > 0
 
 
 def test_a_disabled_or_unknown_sound_stays_silent(monkeypatch):
     calls = []
 
     class FakeWinsound:
-        SND_MEMORY, SND_ASYNC = 4, 1
+        SND_FILENAME, SND_ASYNC = 131072, 1
         PlaySound = staticmethod(lambda data, flags: calls.append(1))
 
     monkeypatch.setattr(sound, "winsound", FakeWinsound)
@@ -42,3 +45,28 @@ def test_a_disabled_or_unknown_sound_stays_silent(monkeypatch):
 def test_without_winsound_nothing_breaks(monkeypatch):
     monkeypatch.setattr(sound, "winsound", None)
     Sounds().play("win")
+
+
+def test_the_real_windows_call_accepts_the_files():
+    """The first version used SND_MEMORY with SND_ASYNC, which Windows rejects, and the error was hidden."""
+    if sound.winsound is None:
+        pytest.skip("not Windows")
+    path = Sounds()._path("tick0")
+    sound.winsound.PlaySound(None, sound.winsound.SND_PURGE)
+    sound.winsound.PlaySound(path, sound.winsound.SND_FILENAME | sound.winsound.SND_ASYNC)   # must not raise
+    sound.winsound.PlaySound(None, sound.winsound.SND_PURGE)
+
+
+def test_a_failing_player_prints_one_warning_instead_of_hiding_the_problem(monkeypatch, capsys):
+    class Broken:
+        SND_FILENAME, SND_ASYNC = 131072, 1
+
+        @staticmethod
+        def PlaySound(data, flags):
+            raise RuntimeError("nope")
+
+    monkeypatch.setattr(sound, "winsound", Broken)
+    player = Sounds()
+    player.play("win")
+    player.play("lose")
+    assert capsys.readouterr().out.count("WARNING: sound could not play") == 1
