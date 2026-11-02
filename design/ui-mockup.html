@@ -281,9 +281,7 @@ function scrStart(){
   });
   h += T(390,462,`PRESS ${kc("SPACE")} TO PLAY`,{s:26,b:1,c:"#fff",al:"c",st:`background:${K.p};border-radius:40px;padding:14px 38px;box-shadow:0 10px 26px rgba(37,99,235,.38)`}).replace('class="a t"','class="a t pulse"');
   h += T(390,512,"Beat the AI to climb the leaderboard",{s:15,c:K.muted,al:"c"});
-  [["Enter your name"],["Check the camera"],["Play 15 rounds"]].forEach(([t],i)=>{ h += A(60+i*218,552,210,54,"step",`<i>${i+1}</i>${t}`,"font-size:15px;padding:0 12px;gap:10px"); });
-  h += T(390,646,"Your hand is tracked live on this computer. No video is saved.",{s:13,c:K.faint,al:"c"});
-  h += T(390,676,CREDIT,{s:12,c:K.faint,al:"c"});
+  h += T(390,664,"Your hand is tracked live on this computer. No video is saved.",{s:13,c:K.faint,al:"c"});
   h += leaderboard();
   return h;
 }
@@ -457,7 +455,7 @@ function scrStyle(){
 const SCREENS = [
  {g:"start",title:"Start screen with leaderboard",when:"Shown when nobody is playing, and after every match.",render:scrStart,
   why:"The first thing a visitor sees is who has beaten the AI most, which is the reason to try. One big instruction, then three steps. The board updates after every match.",
-  marks:[[46,96,"Name of the game and the one-line pitch."],[130,214,"Your artwork floats to draw the eye."],[205,462,"The only instruction: press SPACE."],[52,552,"What happens next: name, camera, play."],[748,48,"Who beat the AI most, by best score in a 15-round match."],[1230,190,"Gold, silver and bronze trophies for the top three; the leader's row is highlighted. Each avatar is the player's favourite move."]]},
+  marks:[[46,96,"Name of the game and the one-line pitch."],[130,214,"Your artwork floats to draw the eye."],[205,462,"The only instruction: press SPACE."],[748,48,"Who beat the AI most, by best score in a 15-round match."],[1230,190,"Gold, silver and bronze trophies for the top three; the leader's row is highlighted. Each avatar is the player's favourite move."]]},
  {g:"start",title:"Enter your name",when:"After SPACE on the start screen. Step 1 of 2.",render:scrName,
   why:"The only typing in the whole flow. A name goes on the leaderboard, and an empty name plays as Guest so nobody is stuck.",
   marks:[[270,292,"Type a name, up to 12 letters."],[430,390,"Empty means Guest, which is not saved."],[432,465,"ENTER moves on."]]},
