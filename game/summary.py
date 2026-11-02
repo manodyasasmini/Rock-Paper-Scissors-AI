@@ -26,7 +26,11 @@ class MatchSummary:
     accuracy: float                                  # hits / predicted_rounds (0 if none)
     hit_flags: list = field(default_factory=list)    # one per predicted round
     running_accuracy: list = field(default_factory=list)
-    habit: str = ""
+    habits: list = field(default_factory=list)       # up to three, clearest first
+
+    @property
+    def habit(self):
+        return self.habits[0] if self.habits else ""
 
 
 def summarize(records):
@@ -41,14 +45,17 @@ def summarize(records):
         rounds=len(records), wins=wins, losses=losses, ties=ties, headline=headline,
         predicted_rounds=len(hit_flags), hits=sum(hit_flags),
         accuracy=sum(hit_flags) / len(hit_flags) if hit_flags else 0.0,
-        hit_flags=hit_flags, running_accuracy=running, habit=find_habit(records),
+        hit_flags=hit_flags, running_accuracy=running, habits=find_habits(records),
     )
 
 
-def find_habit(records):
-    """The clearest habit shown in this match, in one sentence."""
+NO_HABIT = "The AI found no strong habit: you were hard to read."
+
+
+def find_habits(records, limit=3):
+    """The clearest habits shown in this match, one sentence each, strongest first."""
     moves = [r.player_move for r in records]
-    best, best_score = None, 0.0
+    found = []
 
     # What follows a move: needs at least 3 examples, and the same answer at least 60% of the time
     after = {}
@@ -57,15 +64,18 @@ def find_habit(records):
     for previous, counts in after.items():
         total = sum(counts.values())
         move, count = counts.most_common(1)[0]
-        if total >= 3 and count / total >= 0.6 and count * count / total > best_score:
-            best_score = count * count / total
-            best = f"After {previous} you threw {move} {count} of {total} times."
-
-    if best:
-        return best
+        if total >= 3 and count / total >= 0.6:
+            found.append((count * count / total, f"After {previous} you threw {move} {count} of {total} times."))
+    found.sort(key=lambda item: -item[0])
+    habits = [sentence for _, sentence in found]
 
     if len(moves) >= 6:
         move, count = Counter(moves).most_common(1)[0]
         if count / len(moves) >= 0.5:
-            return f"You threw {move} {count} of {len(moves)} times."
-    return "The AI found no strong habit: you were hard to read."
+            habits.append(f"You threw {move} {count} of {len(moves)} times.")
+    return habits[:limit] or [NO_HABIT]
+
+
+def find_habit(records):
+    """The single clearest habit."""
+    return find_habits(records, 1)[0]

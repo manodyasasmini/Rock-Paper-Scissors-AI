@@ -263,3 +263,25 @@ def test_switching_player_starts_a_clean_match(session, monkeypatch):
     session.handle_key(ord("p"), 0)
     session.handle_key(KEY_ESC, 0)
     assert session.match_log == []
+
+
+def test_learn_mode_is_off_by_default_and_h_toggles_it(session):
+    assert session.learn_mode is False
+    session.handle_key(KEY_ESC, 0)
+    session.handle_key(ord("h"), 0)
+    assert session.learn_mode is True
+    session.handle_key(ord("H"), 0)
+    assert session.learn_mode is False
+
+
+def test_h_is_just_a_letter_on_the_name_screen(session):
+    session.handle_key(ord("h"), 0)
+    assert session.input_text == "h"
+    assert session.learn_mode is False
+
+
+def test_the_explanation_is_still_kept_while_learn_mode_is_off(session):
+    session.handle_key(KEY_ESC, 0)
+    play_round(session, "ROCK")
+    play_round(session, "ROCK")
+    assert session.explanation.startswith("The AI expected")

@@ -367,14 +367,15 @@ The new AI is fair against random play and about equal to the first version on s
 
 ### Phase 5: Showing the AI's thinking (built, pending a first-time-player test)
 - [x] The AI's move is locked when the countdown starts. During the countdown the AI card shows only "MOVE LOCKED" and an evidence level, never what it expects
-- [x] After the reveal, the AI card shows three bars: what the AI expected you to throw, with your actual move outlined, a white tick at one-in-three chance, and the evidence level (LOW, MEDIUM, HIGH)
+- [x] **Decision after play-testing:** showing the AI's expectation after every round tells the player which habit to break, so it is hidden by default ("challenge mode"). Press `H` for learn mode, which shows it after each reveal. The summary after a match always shows what the AI learned (`LEARN_MODE_DEFAULT` in `config.py`)
+- [x] In learn mode, after the reveal, the AI card shows three bars: what the AI expected you to throw, with your actual move outlined, a white tick at one-in-three chance, and the evidence level (LOW, MEDIUM, HIGH)
 - [x] One sentence on what happened, built from the AI's real reasoning, for example: "The AI expected PAPER (77%) because you often throw paper after rock then rock. But you threw SCISSORS. You broke your pattern!" (`explain()` in `ai/engine.py`)
-- [x] Match summary after 15 rounds (`MATCH_ROUNDS` in `config.py`, 0 = play on without end): the score, how many throws the AI predicted against the one-in-three chance level, a chart of its running accuracy, and the clearest habit it found (`game/summary.py`). `SPACE` after the last result opens it, and `SPACE` again starts a new match. Running totals carry over
+- [x] Match summary after 15 rounds (`MATCH_ROUNDS` in `config.py`, 0 = play on without end): the score, how many throws the AI predicted against the one-in-three chance level, a chart of its running accuracy, and up to three habits it found (`game/summary.py`). `SPACE` after the last result opens it, and `SPACE` again starts a new match. Running totals carry over
 - [x] Rounds where no hand was detected don't count toward the match, and teach the AI nothing
 - [ ] Test with a first-time player: can they say what the AI noticed, without help?
 
 **Changes from the plan**
-- The "Your habits" panel on the player card was not built. The habit appears in the summary instead.
+- The "Your habits" panel on the player card was not built. The habits appear in the summary instead.
 - Overconfidence is handled by showing the chance tick and the evidence level beside every percentage, not by recalibrating the numbers.
 - The summary has no automatic return to a start screen yet. That belongs with the attract mode in Phase 6.
 

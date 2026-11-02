@@ -136,9 +136,10 @@ def _draw_summary(draw, session, w, h):
                      fill=(0, 255, 160, 255) if hit else (255, 75, 95, 255))
     draw.text((cx, gy2 + 26), "green = the AI guessed that throw, red = it missed", font=FONT_HISTORY, fill=(150, 160, 180, 255), anchor="mm")
 
-    for j, habit_line in enumerate(_wrap(draw, summary.habit, FONT_SUB_BANNER, modal_w - 120)[:2]):
-        draw.text((cx, my1 + 424 + j * 26), habit_line, font=FONT_SUB_BANNER, fill=PLAYER_ACCENT, anchor="mm")
-    draw.text((cx, my1 + 520), "[SPACE] New match      [P] Switch player      [Q] Quit", font=FONT_LABEL_BOLD, fill=(255, 200, 0, 255), anchor="mm")
+    draw.text((cx, my1 + 420), "HABITS IT FOUND", font=FONT_LABEL_BOLD, fill=(255, 120, 170, 255), anchor="mm")
+    for j, habit_line in enumerate(summary.habits[:3]):
+        draw.text((cx, my1 + 450 + j * 28), habit_line, font=FONT_SUB_BANNER, fill=PLAYER_ACCENT, anchor="mm")
+    draw.text((cx, my1 + 538), "[SPACE] New match      [P] Switch player      [Q] Quit", font=FONT_LABEL_BOLD, fill=(255, 200, 0, 255), anchor="mm")
 
 
 _mask_cache = {}
@@ -414,14 +415,15 @@ def render_ui(session, w, h, current_time, live_gesture, view):
     ai_cy = cam_y + cam_h // 2
 
     if session.state == STATE_SHOW_RESULT and session.ai_move:
-        # The AI hand hangs down from the top edge on the left; what it expected is on the right
-        hand_cx = ai_panel_x + 112
+        # The AI hand hangs down from the top edge. In learn mode it moves left to make room for what the AI expected
+        hand_cx = ai_panel_x + 112 if session.learn_mode else ai_cx
         icon = gesture_icon(session.ai_move, cam_h - 8, upside_down=True)
         if icon is not None:
             overlay.alpha_composite(icon, (hand_cx - icon.width // 2, cam_y + 4))
         else:
             draw.text((hand_cx, ai_cy), session.ai_move, font=FONT_CARD_MOVE, fill=(255, 100, 160, 255), anchor="mm")
-        _draw_ai_read(draw, session, ai_panel_x + 236, cam_y, cam_w - 250)
+        if session.learn_mode:
+            _draw_ai_read(draw, session, ai_panel_x + 236, cam_y, cam_w - 250)
     elif session.state == STATE_COUNTDOWN:
         # The dots are drawn after the word, with room kept for all three so the word never shifts
         dots = "." * (int(current_time * 3) % 4)
@@ -430,12 +432,13 @@ def render_ui(session, w, h, current_time, live_gesture, view):
         draw.text((start_x, ai_cy - 14), "DECIDING", font=FONT_CARD_MOVE, fill=(255, 180, 80, 255), anchor="lm")
         draw.text((start_x + word_w + 2, ai_cy - 14), dots, font=FONT_CARD_MOVE, fill=(255, 180, 80, 255), anchor="lm")
         draw.text((ai_cx, ai_cy + 28), "MOVE LOCKED", font=FONT_LABEL_BOLD, fill=(230, 180, 210, 255), anchor="mm")
-        evidence = session.prediction.evidence
-        draw.text((ai_cx, ai_cy + 58), f"EVIDENCE: {evidence}", font=FONT_LABEL, fill=EVIDENCE_COLORS[evidence], anchor="mm")
+        if session.learn_mode:
+            evidence = session.prediction.evidence
+            draw.text((ai_cx, ai_cy + 58), f"EVIDENCE: {evidence}", font=FONT_LABEL, fill=EVIDENCE_COLORS[evidence], anchor="mm")
     else:
         draw.text((ai_cx, ai_cy - 14), "READY", font=FONT_CARD_MOVE, fill=(180, 140, 170, 255), anchor="mm")
         draw.text((ai_cx, ai_cy + 28), "AWAITING ROUND", font=FONT_LABEL_BOLD, fill=(230, 180, 210, 255), anchor="mm")
-        if session.engine.rounds_seen:
+        if session.learn_mode and session.engine.rounds_seen:
             draw.text((ai_cx, ai_cy + 58), f"It has seen {session.engine.rounds_seen} of your throws", font=FONT_LABEL,
                       fill=(190, 160, 180, 255), anchor="mm")
 
@@ -535,6 +538,7 @@ def render_ui(session, w, h, current_time, live_gesture, view):
         ("[P]", "Switch Player"),
         ("[F]", "Fullscreen"),
         ("[D]", "Toggle AI"),
+        ("[H]", f"Learn: {'ON' if session.learn_mode else 'OFF'}"),
         ("[R]", "Reset"),
         ("[Q]", "Quit")
     ]

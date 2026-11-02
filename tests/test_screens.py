@@ -100,27 +100,71 @@ def test_summary_and_ai_read_screens_render(session, monkeypatch, w, h):
     assert render_ui(session, w, h, 101.0, None, None).shape == (h, w, 3)
 
 
-def test_the_bars_stay_hidden_until_the_reveal(session):
-    """Showing the AI's expectation during play would tell the player how to beat it."""
-    w, h = 1280, 720
-    view = view_for(w, h)
+def countdown_session(session, w, h):
+    """A session in the middle of a countdown after five rounds, plus the AI panel's pixel area."""
     session.handle_key(KEY_ESC, 0)
     for i in range(5):
         session.start_round(10.0 * i)
         session.update(10.0 * i + 3, "ROCK")
     session.start_round(100.0)
     lay = arena_layout(w, h)
-    ai_panel = (slice(lay["panel_y1"], lay["panel_y1"] + lay["panel_h"]),
-                slice(lay["ai_x1"] + 20 + 220, lay["ai_x1"] + 20 + lay["panel_w"]))
+    return (slice(lay["panel_y1"], lay["panel_y1"] + lay["panel_h"]),
+            slice(lay["ai_x1"] + 20, lay["ai_x1"] + 20 + lay["panel_w"]))
 
-    during = render_ui(session, w, h, 101.0, "ROCK", view)[ai_panel]
-    session.prediction.probs = {"ROCK": 0.9, "PAPER": 0.05, "SCISSORS": 0.05}   # a very different expectation
-    session.prediction.expected = "ROCK"
-    assert np.array_equal(during, render_ui(session, w, h, 101.0, "ROCK", view)[ai_panel])
+
+def set_expectation(session, probs):
+    session.prediction.probs = probs
+    session.prediction.expected = max(probs, key=probs.get)
+
+
+ROCKY = {"ROCK": 0.9, "PAPER": 0.05, "SCISSORS": 0.05}
+PAPERY = {"ROCK": 0.1, "PAPER": 0.8, "SCISSORS": 0.1}
+
+
+def test_by_default_the_ais_expectation_is_never_drawn(session):
+    """Showing it would tell the player which habit to break."""
+    w, h = 1280, 720
+    view = view_for(w, h)
+    panel = countdown_session(session, w, h)
+    assert session.learn_mode is False
+
+    set_expectation(session, PAPERY)
+    during = render_ui(session, w, h, 101.0, "ROCK", view)[panel]
+    set_expectation(session, ROCKY)
+    assert np.array_equal(during, render_ui(session, w, h, 101.0, "ROCK", view)[panel])
 
     session.update(103.2, "ROCK")
-    revealed = render_ui(session, w, h, 104.0, "ROCK", view)[ai_panel]
-    assert not np.array_equal(during, revealed)
-    session.prediction.probs = {"ROCK": 0.1, "PAPER": 0.8, "SCISSORS": 0.1}     # after the reveal the bars do follow it
-    session.prediction.expected = "PAPER"
-    assert not np.array_equal(revealed, render_ui(session, w, h, 104.0, "ROCK", view)[ai_panel])
+    set_expectation(session, PAPERY)
+    revealed = render_ui(session, w, h, 104.0, "ROCK", view)[panel]
+    set_expectation(session, ROCKY)
+    assert np.array_equal(revealed, render_ui(session, w, h, 104.0, "ROCK", view)[panel])
+
+
+def test_learn_mode_shows_the_expectation_only_after_the_reveal(session):
+    w, h = 1280, 720
+    view = view_for(w, h)
+    panel = countdown_session(session, w, h)
+    session.handle_key(ord("h"), 0)
+    assert session.learn_mode is True
+
+    set_expectation(session, PAPERY)
+    during = render_ui(session, w, h, 101.0, "ROCK", view)[panel]
+    set_expectation(session, ROCKY)
+    assert np.array_equal(during, render_ui(session, w, h, 101.0, "ROCK", view)[panel])  # still hidden while playing
+
+    session.update(103.2, "ROCK")
+    set_expectation(session, PAPERY)
+    revealed = render_ui(session, w, h, 104.0, "ROCK", view)[panel]
+    set_expectation(session, ROCKY)
+    assert not np.array_equal(revealed, render_ui(session, w, h, 104.0, "ROCK", view)[panel])
+
+
+def test_the_dock_shows_which_mode_is_on(session):
+    w, h = 1280, 720
+    view = view_for(w, h)
+    session.handle_key(KEY_ESC, 0)
+    off = render_ui(session, w, h, 0.0, None, view)
+    session.handle_key(ord("h"), 0)
+    on = render_ui(session, w, h, 0.0, None, view)
+    dock = slice(h - 62, h - 16)
+    assert not np.array_equal(off[dock], on[dock])

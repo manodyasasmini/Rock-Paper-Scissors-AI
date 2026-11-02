@@ -1,4 +1,4 @@
-from game.summary import RoundRecord, find_habit, summarize
+from game.summary import NO_HABIT, RoundRecord, find_habit, find_habits, summarize
 
 
 def record(player, ai="SCISSORS", result="TIE", expected=None, prob=0.0):
@@ -66,3 +66,25 @@ def test_the_strongest_habit_wins():
 
 def test_an_empty_match_has_no_habit():
     assert "hard to read" in find_habit([])
+
+
+def test_several_habits_are_listed_strongest_first():
+    # After ROCK always PAPER (4 times), after PAPER always SCISSORS (4 times), after SCISSORS always ROCK (3 times)
+    sequence = ["ROCK", "PAPER", "SCISSORS"] * 4 + ["ROCK", "PAPER"]
+    habits = find_habits(moves(*sequence))
+    assert len(habits) == 3
+    assert habits[0] in ("After ROCK you threw PAPER 5 of 5 times.", "After PAPER you threw SCISSORS 4 of 4 times.")
+    assert all(h.startswith("After ") for h in habits)
+    assert len(set(habits)) == 3
+
+
+def test_the_limit_is_respected_and_a_favourite_move_can_be_listed_too():
+    sequence = ["ROCK", "PAPER", "ROCK", "PAPER", "ROCK", "PAPER", "ROCK", "PAPER", "ROCK", "ROCK"]
+    assert len(find_habits(moves(*sequence), limit=1)) == 1
+    assert any(h.startswith("You threw ROCK") for h in find_habits(moves(*sequence), limit=3))
+
+
+def test_no_habits_gives_one_friendly_line_and_the_summary_carries_the_list():
+    assert find_habits(moves("ROCK", "PAPER", "SCISSORS")) == [NO_HABIT]
+    summary = summarize(moves("ROCK", "PAPER") * 4)
+    assert summary.habits and summary.habit == summary.habits[0]

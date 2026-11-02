@@ -63,6 +63,7 @@ class GameSession:
         self.round_result = None
         self.prediction = None
         self.explanation = ""
+        self.learn_mode = config.LEARN_MODE_DEFAULT
         self.match_log = []      # one RoundRecord per round with a detected move
         self.summary = None
 
@@ -180,6 +181,8 @@ class GameSession:
                 self.start_round(now)
         elif key in (ord("d"), ord("D")):
             self.engine.toggle_mode()
+        elif key in (ord("h"), ord("H")):
+            self.learn_mode = not self.learn_mode
         elif key in (ord("r"), ord("R")):
             self.score_player = self.score_ai = self.score_ties = 0
             self.streak = 0

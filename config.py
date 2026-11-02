@@ -39,3 +39,7 @@ EVIDENCE_HIGH = 5
 
 # Matches: a visitor plays this many rounds, then sees what the AI learned. 0 = play on without end.
 MATCH_ROUNDS = 15
+
+# Learn mode shows what the AI expected after every round. Off by default, because it tells the player
+# which habit to break. The summary after a match always shows what the AI learned. `H` toggles it.
+LEARN_MODE_DEFAULT = False
